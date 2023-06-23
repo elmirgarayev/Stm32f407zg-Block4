@@ -49,25 +49,9 @@ CAN_HandleTypeDef hcan1;
 
 I2C_HandleTypeDef hi2c2;
 
-RTC_HandleTypeDef hrtc;
-
 TIM_HandleTypeDef htim6;
 
 /* USER CODE BEGIN PV */
-
-RTC_DateTypeDef gDate;
-RTC_TimeTypeDef gTime;
-
-char time[10];
-char date[10];
-
-uint8_t hours = 0;
-uint8_t minutes = 0;
-uint8_t seconds = 0;
-uint8_t weekDay = 0;
-uint8_t month = 0;
-uint8_t date1 = 0;
-uint8_t year = 0;
 
 uint16_t digitalStates[80];
 
@@ -79,7 +63,6 @@ static void MX_GPIO_Init(void);
 static void MX_CAN1_Init(void);
 static void MX_ADC2_Init(void);
 static void MX_ADC3_Init(void);
-static void MX_RTC_Init(void);
 static void MX_TIM6_Init(void);
 static void MX_I2C2_Init(void);
 /* USER CODE BEGIN PFP */
@@ -91,8 +74,18 @@ static void MX_I2C2_Init(void);
 
 #define DEV_ADDR 0xa0
 
+//epromun islekliyin yoxlamq ucun
+//int dataw3[2] = {1, 2};
+//int datar3[2] = {0, 0};
 int dataw3 = 31;
 int datar3;
+
+float alarmLevelWrite[25] = {95, 95, 95, 95, 95, 95, 95, 95, 95, 95, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70};
+float alarmLevelRead[25] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+float alarmLevel[25];
+
+int i2_t = 0;
 
 uint16_t message[62];
 uint16_t analog[62];
@@ -101,7 +94,8 @@ enum alarm_state {
 	resetAlarm, notResetAlarm
 };
 
-int j = 0, m = 0, u = 0, p = 0;
+int tamHisse = 0, kesirHisse = 0;
+int say=0;
 
 ////////////////////mux u saydir/////////////////////////////////////////////////////////////////////////////////
 void mux(int sel) {
@@ -127,7 +121,7 @@ void check_channels(int sel) {
 		sum = sum + HAL_ADC_GetValue(&hadc3);
 	}
 	average = sum / sampleRate;
-	message[j] = average;
+	message[sel] = average;
 	sum = 0;
 	average = 0;
 	HAL_ADC_Stop(&hadc3);
@@ -138,119 +132,96 @@ void check_channels(int sel) {
 		sum = sum + HAL_ADC_GetValue(&hadc2);
 	}
 	average = sum / sampleRate;
-	message[j + 16] = average;
+	message[sel + 16] = average;
 	sum = 0;
 	average = 0;
 	HAL_ADC_Stop(&hadc2);
 
 	int tam = 0, qaliq = 0;
 
-	tam = j / 4;
-	qaliq = j % 4;
+	tam = sel / 4;
+	qaliq = sel % 4;
 
 	digitalStates[48 + (3 + tam * 4 - qaliq)] = (HAL_GPIO_ReadPin(GPIOA,
 			GPIO_PIN_6)); // Dig5.1-5.16 Dig37-52
 }
 //////////////////////////id deyerleri////////////////////////////////////////////////////////////////////////////////////////////////
-uint16_t id[26] = { 0x400, 0x401, 0x402, 0x403, 0x404, 0x405, 0x406, 0x407,
-		0x408, 0x409, 0x40A, 0x40B, 0x40C, 0x40D, 0x40E, 0x40F, 0x410, 0x411,
-		0x412, 0x413, 0x414, 0x450, 0x451, 0x452, 0x453, 0x454, 0x455, 0x456 };
+uint16_t id[30] = { 0x400, 0x401, 0x402, 0x403, 0x404, 0x405, 0x406, 0x407, 0x408, 0x409, 0x40A, 0x40B, 0x40C, 0x40D, 0x40E, 0x40F, 0x410, 0x411, 0x412, 0x413, 0x414, 0x450, 0x451, 0x452, 0x453, 0x454, 0x455, 0x456 , 0x604, 0x658};
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-CAN_TxHeaderTypeDef TxHeader[25];
+CAN_TxHeaderTypeDef TxHeader[30];
 
 CAN_RxHeaderTypeDef RxHeader;
 
 int datacheck = 0;
 uint8_t pk1 = 0;
 
-uint16_t TxData[25][4];
+uint16_t TxData[30][4];
 
 uint8_t RxData[8];
 
 uint32_t TxMailbox;
 
 /*******	config  ***********/
-uint16_t contactState[28] = 		{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};			//normal open is 0 , normal close 1
-/*uint16_t contactState[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };	//normal open is 0 , normal close 1*/
-uint16_t delaySeconds[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };//signal cixdiqdan sonra neqeder gozleyecek
-uint16_t digitalInputId[28] = { 4065, 4066, 4067, 4068, 4069, 4070, 4071, 4072,
-		4073, 4074, 4075, 4076, 4077, 4078, 4079, 4080, 4081, 4082, 4083, 4084,
-		4085, 4086, 4087, 4088, 4089, 4090, 4091, 4092 };		//signal id leri
-//uint16_t digitalInputId[77] =  		{4001,4002,4003,4004,4005,4006,4007,4008,4009,4010,4011,4012,4013,4014,4015,4016,4017,4018,4019,4020,4021,4022,4023,4024,4025,4026,4027,4028,4029,4030,4031,4032,4033,4034,4035,4036,4037,4038,4039,4040,4041,4042,4043,4044,4045,4046,4047,4048,4049,4050,4051,4052,4053,4054,4055,4056,4057,4058,4059,4060,4061,4062,4063,4064,4065,4066,4067,4068,4069,4070,4071,4072,4073,4074,4075,4076,4077};				//signal id leri
-uint8_t fadeOut[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0 };
-uint8_t fadeOutBaxmaq[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+//uint16_t contactState[28] = 		{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};			//normal open is 0 , normal close 1
+uint16_t contactState[28];
+uint16_t contactStateTot[5] = {0,0,0,0,0};
+uint16_t contactStateRead[5] = {0,0,0,0,0};
+uint16_t contactStateTest[28];
+uint16_t delaySeconds[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };//signal cixdiqdan sonra neqeder gozleyecek
+uint16_t delaySecondsTot[40];
+uint16_t delaySecondsTotRead[40];
+uint16_t digitalInputId[28] = { 4065, 4066, 4067, 4068, 4069, 4070, 4071, 4072, 4073, 4074, 4075, 4076, 4077, 4078, 4079, 4080, 4081, 4082, 4083, 4084, 4085, 4086, 4087, 4088, 4089, 4090, 4091, 4092 };		//signal id leri
+uint8_t fadeOut[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+uint8_t fadeOutBaxmaq[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
 uint16_t fadeOutTot[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 uint16_t fadeOutTotRead[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 uint16_t fadeOutTotReadTest[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; //
 fadeOutReg = 0;
 
-uint16_t delaySecondsCount[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };		//delay saniye sayici
+uint16_t delaySecondsCount[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };		//delay saniye sayici
 
-uint16_t alarmOn[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+uint16_t delaySecondsCountForOff[71] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };		//alarmi sondurmek icin delay saniye sayici
 
-uint16_t alarmOnAnalog[30] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+uint16_t alarmOn[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-uint16_t alarmCount[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; 			// digital alarm sayicisi
-uint16_t waitingForDelay[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };	// delay ucun gozleme registeri
+uint16_t alarmOnAnalog[30] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-uint16_t analogInputID[10] = { 4006, 4008, 4010, 4012, 4014, 4016, 4018, 4020,
-		4022, 4024 }; // analog ID
+uint16_t alarmCount[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; 			// digital alarm sayicisi
+uint16_t waitingForDelay[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };	// delay ucun gozleme registeri
 
-uint16_t secondByte[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0 }; // analog alarm sayicilarin tutmaq ucun
+uint16_t analogInputID[10] = { 4006, 4008, 4010, 4012, 4014, 4016, 4018, 4020, 4022, 4024 }; // analog ID
 
-uint16_t analogAlarmCount[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0 }; // analog alarm sayicilarin tutmaq ucun
-uint16_t analogAlarmCountDown[20] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0 }; // analog alarm sayicilarin tutmaq ucun
+uint16_t secondByte[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; // analog alarm sayicilarin tutmaq ucun
 
-uint8_t analogFadeOut[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0 }; // analog fade outlari tutmaq ucun
-uint8_t analogFadeOutBaxmaq[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0 }; // analog fade outlari tutmaq ucun
+uint16_t analogAlarmCount[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; // analog alarm sayicilarin tutmaq ucun
+uint16_t analogAlarmCountDown[20] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; // analog alarm sayicilarin tutmaq ucun
+
+uint8_t analogFadeOut[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; // analog fade outlari tutmaq ucun
+uint8_t analogFadeOutBaxmaq[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; // analog fade outlari tutmaq ucun
+
 uint16_t analogFadeOutTot[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 uint16_t analogFadeOutTotRead[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 uint16_t analogFadeOutTotReadTest[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; //
 
-uint16_t analogSignalFoult[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0 }; // analog signal foult tutucu
-
 uint16_t stationAlarm = 0;
 
 uint8_t recivedReset = 0;
-
-//uint16_t digital[16]=0;
-
-uint16_t digitalSum[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+uint8_t alarmLevelRecivedFlag=0;	//bunu qoyuramki alarmLimitLevel yollanildigin qeyd edim ve bunun qebul etdiyimle bagli mesaji geri gonderende buna esasen edim.
+uint8_t prencereAcilmaFlag=0;
+uint16_t digitalSum[10] = {0,0,0,0,0,0,0,0,0,0};
 
 uint16_t intPart[50];
 uint8_t fractionPart[50];
 
 uint16_t secondWord[50];
 
-float hValue = 0;   // grafiki cixan hesabin rahat hesablamaq ucun
-float hValue2 = 0; //ustu 2
-float hValue3 = 0; //ustu 3
-float hValueM = 0;   // vurulmasi
-float hValue2M = 0; //2 vurulmasi
-float hValue3M = 0; //3 vurulmasi
-
 float realVal[50];
 float voltValIncorrect[50];
 float voltVal[50];
 
 int recivedID = 0;
-int say = 0;
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1) {
 
@@ -266,36 +237,66 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1) {
 		//HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_RESET);
 	}
 
-	if (RxHeader.StdId == 0x600) {
-		recivedID = (int) (RxData[0]) + ((int) (RxData[1]) << 8);
-
-		fadeOutReg = 1;
-
-		for (int t = 0; t < 28; t++) {
-			if (digitalInputId[t] == recivedID) {
-				fadeOut[t] = RxData[2];
-
-			}
-
-			if (t < 10) {
-				if (analogInputID[t] == recivedID) {
-					analogFadeOut[t] = RxData[2];
-				}
-			}
-		}
-
-	}
-
 	if (RxHeader.StdId == 0x501) {
 		pk1 = RxData[0];
 	}
 
-	if (RxHeader.DLC == 2) {
+	if (RxHeader.StdId == 0x600) {
+		recivedID = (int) (RxData[0]) + ((int) (RxData[1]) << 8);
+		float value = 0;
+		TxData[28][0] = recivedID;
+		for (int t = 0; t < 28; t++) {
+			if (digitalInputId[t] == recivedID){
+				fadeOutReg = 1;
+				alarmLevelRecivedFlag = 1;	//qebul etdiyimizi qey edirik. geri xeber etdiyimizde sifirla.
+				fadeOut[t] = RxData[2] & 0x01;
+				contactState[t] = (RxData[2] >> 1) & 0x01;
+				delaySeconds[t] = (int)RxData[3] + ((int)RxData[4] << 8);
+			}
+		}
 
+		for(int k=0; k<10; k++)
+		{
+			if(analogInputID[k] == recivedID) //deyekki id bunun icindedi
+			{
+				fadeOutReg = 1;
+				alarmLevelRecivedFlag = 1;	//qebul etdiyimizi qey edirik. geri xeber etdiyimizde sifirla.
+				value = (int)RxData[3] + ((int)RxData[4] << 8) + ((float)RxData[5])/100;
+				analogFadeOut[k] = RxData[2];
+				alarmLevel[k]=value;
+			}
+		}
+	}
+
+	//0x650 gelende hl hazirdaki deyerleri qoy 0x656 nin icine yolla pc yeki orda pencerede goruntuleye bilsin.
+	if (RxHeader.StdId == 0x650) {
+		recivedID = (int) (RxData[0]) + ((int) (RxData[1]) << 8);
+		for (int k = 0; k < 28; k++) {
+			if (digitalInputId[k] == recivedID) {
+				prencereAcilmaFlag = 1;
+				TxData[29][0] = recivedID;
+				TxData[29][1] = fadeOut[k] + (contactState[k] << 1);
+				TxData[29][2] = delaySeconds[k];
+				TxData[29][3] = 0;
+			}
+		}
+
+		for(int k=0; k<10; k++)
+		{
+			if(analogInputID[k] == recivedID) //deyekki id bunun icindedi
+			{
+				prencereAcilmaFlag = 1;
+				TxData[29][0] = recivedID;
+				TxData[29][1] = analogFadeOut[k];
+				TxData[29][2] = (int)alarmLevel[k];
+				TxData[29][3] = (int)((alarmLevel[k] - (int)alarmLevel[k]) * 100);
+			}
+		}
 	}
 
 }
 
+//float alarmLevel[25] = {95, 95, 95, 95, 95, 95, 95, 95, 95, 95, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70};
 
  struct analogConfig
  {
@@ -304,132 +305,38 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1) {
  float minRealVal;
  float maxRealVal;
  float warningLevel;
- float alarmLevel;
  int moreThen;
 
 
  }analogConfigs[25]={
- {0.64,3.3,0,114.296875,40,95,1},			//4006
- {0.64,3.3,0,114.296875,60,95,1},			//4008
- {0.64,3.3,0,114.296875,60,95,1},			//4010
- {0.64,3.3,0,114.296875,60,95,1},			//4012
- {0.64,3.3,0,114.296875,60,95,1},			//4014
- {0.64,3.3,0,114.296875,40,95,1},			//4016
- {0.64,3.3,0,114.296875,60,95,1},			//4018
- {0.64,3.3,0,114.296875,60,95,1},			//4020
- {0.64,3.3,0,114.296875,60,95,1},			//4022
- {0.64,3.3,0,114.296875,60,95,1},			//4024
- {0.64,3.2,0,1000,60,70,0},
- {0.64,3.2,0,1000,60,70,0},
- {0.64,3.2,0,1000,60,70,0},
- {0.64,3.2,0,1000,60,70,0},
- {0.64,3.2,0,1000,60,70,0},
- {0.64,3.2,0,1000,60,70,0},
- {0.64,3.2,0,1000,60,70,0},
- {0.64,3.2,0,1000,60,70,0},
- {0.64,3.2,0,1000,60,70,0},
- {0.64,3.2,0,1000,60,70,0},
- {0.64,3.2,0,1000,60,70,0},
- {0.64,3.2,0,1000,60,70,0},
- {0.64,3.2,0,1000,60,70,0},
- {0.64,3.2,0,1000,60,70,0},
- {0.64,3.2,0,1000,60,70,0}
+ {0.64,3.3,0,114.296875,40,1},			//4006
+ {0.64,3.3,0,114.296875,60,1},			//4008
+ {0.64,3.3,0,114.296875,60,1},			//4010
+ {0.64,3.3,0,114.296875,60,1},			//4012
+ {0.64,3.3,0,114.296875,60,1},			//4014
+ {0.64,3.3,0,114.296875,40,1},			//4016
+ {0.64,3.3,0,114.296875,60,1},			//4018
+ {0.64,3.3,0,114.296875,60,1},			//4020
+ {0.64,3.3,0,114.296875,60,1},			//4022
+ {0.64,3.3,0,114.296875,60,1},			//4024
+ {0.64,3.2,0,1000,60,0},
+ {0.64,3.2,0,1000,60,0},
+ {0.64,3.2,0,1000,60,0},
+ {0.64,3.2,0,1000,60,0},
+ {0.64,3.2,0,1000,60,0},
+ {0.64,3.2,0,1000,60,0},
+ {0.64,3.2,0,1000,60,0},
+ {0.64,3.2,0,1000,60,0},
+ {0.64,3.2,0,1000,60,0},
+ {0.64,3.2,0,1000,60,0},
+ {0.64,3.2,0,1000,60,0},
+ {0.64,3.2,0,1000,60,0},
+ {0.64,3.2,0,1000,60,0},
+ {0.64,3.2,0,1000,60,0},
+ {0.64,3.2,0,1000,60,0}
  };
 
- /*
-struct analogConfig {
-	float minVolt;
-	float maxVolt;
-	float minRealVal;
-	float maxRealVal;
-	float warningLevel;
-	float alarmLevel;
-	int moreThen;
 
-} analogConfigs[25] =
-		{ { 0.64, 3.3, 0, 103.90625, 40, 1500, 1 },			//4006
-				{ 0.64, 3.3, 0, 103.90625, 60, 1500, 1 },			//4008
-				{ 0.64, 3.3, 0, 103.90625, 60, 1500, 1 },			//4010
-				{ 0.64, 3.3, 0, 103.90625, 60, 1500, 1 },			//4012
-				{ 0.64, 3.3, 0, 103.90625, 60, 1500, 1 },			//4014
-				{ 0.64, 3.3, 0, 103.90625, 40, 1500, 1 },			//4016
-				{ 0.64, 3.3, 0, 103.90625, 60, 1500, 1 },			//4018
-				{ 0.64, 3.3, 0, 103.90625, 60, 1500, 1 },			//4020
-				{ 0.64, 3.3, 0, 103.90625, 60, 1500, 1 },			//4022
-				{ 0.64, 3.3, 0, 103.90625, 60, 1500, 1 },			//4024
-				{ 0.64, 3.2, 0, 1000, 60, 1500, 1 }, { 0.64, 3.2, 0, 1000, 60,
-						1500, 1 }, { 0.64, 3.2, 0, 1000, 60, 1500, 1 }, { 0.64,
-						3.2, 0, 1000, 60, 1500, 1 }, { 0.64, 3.2, 0, 1000, 60,
-						1500, 1 }, { 0.64, 3.2, 0, 1000, 60, 1500, 1 }, { 0.64,
-						3.2, 0, 1000, 60, 1500, 1 }, { 0.64, 3.2, 0, 1000, 60,
-						1500, 1 }, { 0.64, 3.2, 0, 1000, 60, 1500, 1 }, { 0.64,
-						3.2, 0, 1000, 60, 1500, 1 }, { 0.64, 3.2, 0, 1000, 60,
-						1500, 1 }, { 0.64, 3.2, 0, 1000, 60, 1500, 1 }, { 0.64,
-						3.2, 0, 1000, 60, 1500, 1 }, { 0.64, 3.2, 0, 1000, 60,
-						1500, 1 }, { 0.64, 3.2, 0, 1000, 60, 1500, 1 } };
-*/
-void set_time(void) {
-	RTC_TimeTypeDef sTime = { 0 };
-	RTC_DateTypeDef sDate = { 0 };
-
-	/* USER CODE BEGIN RTC_Init 1 */
-
-	/* USER CODE END RTC_Init 1 */
-	/** Initialize RTC Only
-	 */
-
-	hrtc.Instance = RTC;
-	hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
-	hrtc.Init.AsynchPrediv = 127;
-	hrtc.Init.SynchPrediv = 255;
-	hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
-	hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
-	hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
-	if (HAL_RTC_Init(&hrtc) != HAL_OK) {
-		Error_Handler();
-	}
-
-	/* USER CODE BEGIN Check_RTC_BKUP */
-
-	/* USER CODE END Check_RTC_BKUP */
-
-	/** Initialize RTC and set the Time and Date
-	 */
-
-	sTime.Hours = 0x14;
-	sTime.Minutes = 0x14;
-	sTime.Seconds = 0x30;
-	sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
-	sTime.StoreOperation = RTC_STOREOPERATION_RESET;
-	if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK) {
-		Error_Handler();
-	}
-	sDate.WeekDay = RTC_WEEKDAY_TUESDAY;
-	sDate.Month = RTC_MONTH_JULY;
-	sDate.Date = 0x5;
-	sDate.Year = 0x22;
-
-	if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK) {
-		Error_Handler();
-	}
-	/* USER CODE BEGIN RTC_Init 2 */
-
-	/* USER CODE END RTC_Init 2 */
-}
-
-void get_time(void) {
-
-	/* Get the RTC current Time */
-	HAL_RTC_GetTime(&hrtc, &gTime, RTC_FORMAT_BIN);
-	/* Get the RTC current Date */
-	HAL_RTC_GetDate(&hrtc, &gDate, RTC_FORMAT_BIN);
-	/* Display time Format: hh:mm:ss */
-	sprintf((char*) time, "%02d:%02d:%02d", gTime.Hours, gTime.Minutes,
-			gTime.Seconds);
-	/* Display date Format: dd-mm-yy */
-	sprintf((char*) date, "%02d-%02d-%2d", gDate.Date, gDate.Month,
-			2000 + gDate.Year);
-}
 
 /* USER CODE END 0 */
 
@@ -464,7 +371,6 @@ int main(void)
   MX_CAN1_Init();
   MX_ADC2_Init();
   MX_ADC3_Init();
-  MX_RTC_Init();
   MX_TIM6_Init();
   MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
@@ -474,7 +380,7 @@ int main(void)
 	HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
 // 14 dene header olacaq
 
-	for (j = 0; j < 22; j++) {
+	for (int j = 0; j < 30; j++) {
 		TxHeader[j].DLC = 8;
 		TxHeader[j].IDE = CAN_ID_STD;
 		TxHeader[j].RTR = CAN_RTR_DATA;
@@ -484,31 +390,19 @@ int main(void)
 	//Start Timer
 
 	HAL_TIM_Base_Start_IT(&htim6);
-
-	if (HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR1) != 0x32F2) {
-		set_time();
+	//eeprom un 100 cu page e qeder temizlemek
+/*
+	for(int t=0;t > 100 ; t++){
+		EEPROM_PageErase(t);
 	}
+*/
 
-	//EEPROM_Write_NUM (0, 0, dataw3);
-	//datar3 = EEPROM_Read_NUM (0, 0);
-
-	/*
-	 EEPROM_PageErase(0);
-	 EEPROM_PageErase(1);
-	 EEPROM_PageErase(2);
-	 EEPROM_PageErase(3);
-	 EEPROM_PageErase(4);
-	 EEPROM_PageErase(5);
-	 EEPROM_PageErase(6);
-	 EEPROM_PageErase(7);
-	 */
-
-	/**/
 	fadeOutTotRead[0] = EEPROM_Read_NUM(1, 0);
 	fadeOutTotRead[1] = EEPROM_Read_NUM(2, 0);
 
 	analogFadeOutTotRead[0] = EEPROM_Read_NUM(3, 0);
 
+	//analog ve digital fade outlari burda eepromdan yukle
 	for (int k = 0; k < 16; k++) {
 		fadeOut[k] = (fadeOutTotRead[0] >> k) & 1;
 		if (k < 12) {
@@ -516,10 +410,44 @@ int main(void)
 		}
 
 		if (k < 10) {
-			analogFadeOut[k] = (analogFadeOutTotRead[1] >> k) & 1;
+			analogFadeOut[k] = (analogFadeOutTotRead[0] >> k) & 1;
 		}
 
 	}
+
+	//analog alarmLevel leri burda eepromdan yukle
+	for(int k=0;k<10;k++)
+	{
+		alarmLevel[k] = EEPROM_Read_NUM(8, 4*k);
+	}
+
+	contactStateRead[0] = EEPROM_Read_NUM(10, 0);
+	contactStateRead[1] = EEPROM_Read_NUM(11, 0);
+
+
+	//contact state leri eepromdan yukle
+	for(int k=0;k<16;k++){
+		contactState[k] = (contactStateRead[0] >> k) & 1;
+		if(k<12){
+			contactState[k+16] = (contactStateRead[1] >> k) & 1;
+		}
+	}
+
+
+	// delay secondsu eepromdan oxuma
+	for(int t=0;t<7;t++){
+		for(int k=0;k<4;k++){
+
+			delaySecondsTotRead[t*4+k] = EEPROM_Read_NUM(20+t, 16*k);
+
+			delaySeconds[8*t+k*2] = (delaySecondsTotRead[t*4+k]) & 0xff;
+			delaySeconds[8*t+k*2+1] = (delaySecondsTotRead[t*4+k] >> 8) & 0xff;
+		}
+	}
+
+	//bu testi wile icine qoyma cunki eeprom un yazma omru var bu omur 1milyon defedi. bir cel olse butun eprom xarab olacaq.
+	EEPROM_Write_NUM(0, 0, dataw3);
+	datar3 = EEPROM_Read_NUM(0, 0);
 
   /* USER CODE END 2 */
 
@@ -529,6 +457,26 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+		if (prencereAcilmaFlag == 1){
+			HAL_CAN_AddTxMessage(&hcan1, &TxHeader[29], TxData[29], &TxMailbox);
+			HAL_Delay(1);
+			//TxData[26][0] = 0;TxData[26][1] = 0;TxData[26][2] = 0;TxData[26][3] = 0;
+			prencereAcilmaFlag = 0;
+		}
+
+		// bu hissede eger alarm level deyisibse yollayirq
+		if (alarmLevelRecivedFlag == 1)
+		{
+			for(int k=0;k<10;k++)
+			{
+				EEPROM_Write_NUM(8, 4*k, alarmLevel[k]);
+				alarmLevelRead[k] = EEPROM_Read_NUM(8, 4*k);
+			}
+			HAL_CAN_AddTxMessage(&hcan1, &TxHeader[28], TxData[28], &TxMailbox);
+			HAL_Delay(1);
+			alarmLevelRecivedFlag = 0;
+		}
 
 		if (fadeOutReg == 1) {
 			fadeOutTot[0] = 0;
@@ -552,13 +500,55 @@ int main(void)
 
 			EEPROM_Write_NUM(3, 0, analogFadeOutTot[0]);
 
+			fadeOutTotReadTest[0] = EEPROM_Read_NUM(1, 0);
+			fadeOutTotReadTest[1] = EEPROM_Read_NUM(2, 0);
+
+			analogFadeOutTotReadTest[0] = EEPROM_Read_NUM(3, 0);
+
+			contactStateTot[0] = 0;
+			contactStateTot[1] = 0;
+			contactStateTot[2] = 0;
+			contactStateTot[3] = 0;
+			contactStateTot[4] = 0;
+
+			//digital signallarin contact state ini eeproma yazdirmaq
+			for(int t=0;t<16;t++){
+				contactStateTot[0] |= contactState[t]<<t;
+				contactStateTot[1] |= contactState[t+16]<<t;
+				contactStateTot[2] |= contactState[t+32]<<t;
+				contactStateTot[3] |= contactState[t+48]<<t;
+				if(t<7){
+					contactStateTot[4] |= contactState[t+64]<<t;
+				}
+			}
+
+			EEPROM_Write_NUM (10, 0, contactStateTot[0]);
+			EEPROM_Write_NUM (11, 0, contactStateTot[1]);
+			EEPROM_Write_NUM (12, 0, contactStateTot[2]);
+			EEPROM_Write_NUM (13, 0, contactStateTot[3]);
+			EEPROM_Write_NUM (14, 0, contactStateTot[4]);
+
+			contactStateTest[0] = EEPROM_Read_NUM(10, 0);
+			contactStateTest[1] = EEPROM_Read_NUM(11, 0);
+			contactStateTest[2] = EEPROM_Read_NUM(12, 0);
+			contactStateTest[3] = EEPROM_Read_NUM(13, 0);
+			contactStateTest[4] = EEPROM_Read_NUM(14, 0);
+
+
+			/////////delay secondsu eeproma yazma
+
+			for(int t=0;t<9;t++){
+				for(int k=0;k<4;k++){
+					delaySecondsTot[t*4+k] |= delaySeconds[8*t+k*2]<<0;
+					delaySecondsTot[t*4+k] |= delaySeconds[8*t+k*2+1]<<8;
+
+					EEPROM_Write_NUM(20+t, 16*k, delaySecondsTot[t*4+k]);
+					delaySecondsTot[t*4+k] = 0;
+				}
+			}
+
 			fadeOutReg = 0;
 		}
-
-		fadeOutTotReadTest[0] = EEPROM_Read_NUM(1, 0);
-		fadeOutTotReadTest[1] = EEPROM_Read_NUM(2, 0);
-
-		analogFadeOutTotReadTest[0] = EEPROM_Read_NUM(3, 0);
 
 		for (int k = 0; k < 16; k++) {
 			fadeOutBaxmaq[k] = (fadeOutTotReadTest[0] >> k) & 1;
@@ -572,23 +562,16 @@ int main(void)
 
 		}
 
-		get_time();
-
-		hours = gTime.Hours;
-		minutes = gTime.Minutes;
-		seconds = gTime.Seconds;
 		////////////////////////////////////////////////mux u saydir adc ve dig deyerlri yolla/////////////////////////////////////////////////////
-		for (j = 0; j < 16; ++j) {
-			mux(15 - j);
+		for (int t = 0; t < 16; ++t) {
+			mux(15 - t);
 			HAL_Delay(1);
-			check_channels(j);
+			check_channels(t);
 		}
-
-		for (j = 0; j < 20; j++) {
-			if ((j != 0) && (j != 2) && (j != 4) && (j != 6) && (j != 8)
-					&& (j != 10) && (j != 12) && (j != 14) && (j != 16)
-					&& (j != 18)) {
-				analog[m] = message[j]; ////lazimsiz bos mesajlari atmaq
+		int m=0;
+		for (int t = 0; t < 20; t++) {
+			if ((t != 0) && (t != 2) && (t != 4) && (t != 6) && (t != 8) && (t != 10) && (t != 12) && (t != 14) && (t != 16) && (t != 18)) {
+				analog[m] = message[t]; ////lazimsiz bos mesajlari atmaq
 				m++;
 			}
 		}
@@ -674,36 +657,26 @@ int main(void)
 
 		for (int k = 0; k < 28; k++) {
 			if ((k != 7) && (k != 8) && (k != 15) && (k != 16)) {
-				if (digitalStates[k] == contactState[k]) //eger digital girisimiz biizm mueyyen elediyimiz veziyetdedise yeni loru dile yanibsa
-						{
-					if (alarmOn[k] == 0)    			//eger alarim cixmayibsa
-							{
-						if (waitingForDelay[k] == 1) //qoyulan vaxdin tamamlanmagin gozdeyirik
-								{
-							if ((delaySeconds[k] <= delaySecondsCount[k])
-									&& (fadeOut[k] == 0)) // qoyulan vaxda catdisa
-									{
+				if (digitalStates[k] == contactState[k]){ //eger digital girisimiz biizm mueyyen elediyimiz veziyetdedise yeni loru dile yanibsa
+					if (alarmOn[k] == 0){    			//eger alarim cixmayibsa
+						if (waitingForDelay[k] == 1){ //qoyulan vaxdin tamamlanmagin gozdeyirik
+							if ((delaySeconds[k] <= delaySecondsCount[k]) && (fadeOut[k] == 0)){ // qoyulan vaxda catdisa
 								alarmOn[k] = 1;                  //alarmi yandir
 								sendData(digitalInputId[k]);				//
 								stationAlarm = notResetAlarm;//alarimi yandir signal cixdi deye
-								HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13,
-										GPIO_PIN_SET);	//alarim isigin yandir
+								HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_SET);	//alarim isigin yandir
 								waitingForDelay[k] = 0;	//delay ucun gozdeme sayicisin sifirla
 							}
 						} else {
 							alarmCount[k]++;//n defe alarm cixidigin yoxlayan sayici
-							if (alarmCount[k] > 4)			//4 defe cixdisa gir
-									{
-								if ((delaySeconds[k] == 0) && (fadeOut[k] == 0))//saniye sayan 0 disa gir
-										{
+							if (alarmCount[k] > 4){			//4 defe cixdisa gir
+								if ((delaySeconds[k] == 0) && (fadeOut[k] == 0)){//saniye sayan 0 disa gir
 									alarmOn[k] = 1;				//alari yandir
 									sendData(digitalInputId[k]);
 									stationAlarm = notResetAlarm;//alarimi yandir signal cixdi deye
-									HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13,
-											GPIO_PIN_SET);//alarim isigin yandir
+									HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_SET);//alarim isigin yandir
 								} else {
 									waitingForDelay[k] = 1;	//sayci ucun gozdeme regisitiri
-
 								}
 
 								alarmCount[k] = 5;//alarm count 4 den boyukduse 5 den cox boyumesin
@@ -718,13 +691,13 @@ int main(void)
 					delaySecondsCount[k] = 0;
 				}
 
-				u = k / 8;// 1 id 4 word yollayir onagore her word ucun boluruk
-				p = k % 8;	//sonraki wordun necencisi olduguna bundan baxiriq
+				tamHisse = k / 8;// 1 id 4 word yollayir onagore her word ucun boluruk
+				kesirHisse = k % 8;	//sonraki wordun necencisi olduguna bundan baxiriq
 
 				if (alarmOn[k] != 0) {
-					digitalSum[u] |= (1 << p * 2); //burdada necncei wordun olduguna sonra hemin wordun necencisi olduguna baxiriq
+					digitalSum[tamHisse] |= (1 << kesirHisse * 2); //burdada necncei wordun olduguna sonra hemin wordun necencisi olduguna baxiriq
 				}
-				digitalSum[u] |= (fadeOut[k] << (p * 2 + 1));
+				digitalSum[tamHisse] |= (fadeOut[k] << (kesirHisse * 2 + 1));
 			}
 		}
 		if (HAL_GPIO_ReadPin(GPIOF, GPIO_PIN_6) == 1 || recivedReset == 1) //reset basdiq veya conpuyuterden reset geldi
@@ -739,9 +712,8 @@ int main(void)
 			TxData[21][1] = 3;
 			say--;
 			for (int hh = 0; hh < 10; hh++) {
-				HAL_CAN_AddTxMessage(&hcan1, &TxHeader[21], TxData[21],
-						&TxMailbox);
-				HAL_Delay(20);
+				HAL_CAN_AddTxMessage(&hcan1, &TxHeader[21], TxData[21], &TxMailbox);
+				HAL_Delay(60);
 			}
 		} else {
 			TxData[21][1] = 0;
@@ -753,7 +725,7 @@ int main(void)
 		TxData[21][3] = stationAlarm;
 
 		HAL_CAN_AddTxMessage(&hcan1, &TxHeader[21], TxData[21], &TxMailbox);
-		HAL_Delay(20);
+		HAL_Delay(60);
 
 		TxData[8][0] = digitalSum[0];
 		TxData[8][1] = digitalSum[1];
@@ -761,7 +733,7 @@ int main(void)
 		TxData[8][3] = digitalSum[3];
 
 		HAL_CAN_AddTxMessage(&hcan1, &TxHeader[8], TxData[8], &TxMailbox);
-		HAL_Delay(20);
+		HAL_Delay(60);
 
 		digitalSum[0] = 0;
 		digitalSum[1] = 0;
@@ -771,121 +743,77 @@ int main(void)
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		for (int i = 0; i < 5; i++) {
-			for (j = 0; j < 2; j++) {
-				/*
-				 voltValIncorrect[i*2+j] = (((float)analog[i*2+j])*3.3)/4096.0;    //voltaj deyeri xetali olan
-				 if(voltValIncorrect[i*2+j] <= 1.6)
-				 {
-				 voltVal[i*2+j] = voltValIncorrect[i*2+j];    //voltaj deyeri tap
-				 }
-				 else
-				 {
-				 hValue  = (voltValIncorrect[i*2+j] - 1.6);
-				 hValue2 = pow(hValue,2);
-				 hValue3 = pow(hValue,3);
-				 hValueM  = 0.1990*hValue;
-				 hValue2M = 0.4346*hValue2;
-				 hValue3M = 0.44*hValue3;
-
-				 voltVal[i*2+j] = voltValIncorrect[i*2+j] + hValue3M - hValue2M + hValueM - 0,0072;
-				 }
-				 */
-
-				voltVal[i * 2 + j] = (((float) analog[i * 2 + j]) * 3.3)
-						/ 4096.0;
-
-				realVal[i * 2 + j] = ((voltVal[i * 2 + j]
-						- analogConfigs[i * 2 + j].minVolt)
-						/ (analogConfigs[i * 2 + j].maxVolt
-								- analogConfigs[i * 2 + j].minVolt))
-						* (analogConfigs[i * 2 + j].maxRealVal
-								- analogConfigs[i * 2 + j].minRealVal); //olculen vahide gore hesablanan deyer yeni tempdise tempratur qarsiligi voltajin
-				intPart[i * 2 + j] = (uint16_t) realVal[i * 2 + j];
-				fractionPart[i * 2 + j] = (uint8_t) ((realVal[i * 2 + j]
-						- intPart[i * 2 + j]) * 100);
-				if (analogConfigs[i * 2 + j].moreThen == 0) {
-					if (realVal[i * 2 + j]
-							< analogConfigs[i * 2 + j].alarmLevel) {
-						analogAlarmCountDown[i * 2 + j] = 0;
-						if (alarmOnAnalog[i * 2 + j] == 0) {
-							analogAlarmCount[i * 2 + j]++; // analog alarimin say
-							if ((analogAlarmCount >= 10)
-									&& (analogFadeOut[i * 2 + j] == 0)) // 4 defe alarm verse analog alarimin yandir
-									{
-								alarmOnAnalog[i * 2 + j] = 1;
-								sendData(analogInputID[i * 2 + j]);
-								secondByte[i * 2 + j] |= 2; // eger alarim oldusa 1 ci biti 1 ele
+			for (int t = 0; t < 2; t++) {
+				i2_t = i*2+t;
+				voltVal[i2_t] = (((float) analog[i2_t]) * 3.3) / 4096.0;
+				realVal[i2_t] = ((voltVal[i2_t] - analogConfigs[i2_t].minVolt) / (analogConfigs[i2_t].maxVolt - analogConfigs[i2_t].minVolt)) * (analogConfigs[i2_t].maxRealVal - analogConfigs[i2_t].minRealVal); //olculen vahide gore hesablanan deyer yeni tempdise tempratur qarsiligi voltajin
+				intPart[i2_t] = (uint16_t) realVal[i2_t];
+				fractionPart[i2_t] = (uint8_t) ((realVal[i2_t] - intPart[i2_t]) * 100);
+				if (analogConfigs[i2_t].moreThen == 0) {
+					if (realVal[i2_t] < alarmLevel[i2_t]) {
+						analogAlarmCountDown[i2_t] = 0;
+						if (alarmOnAnalog[i2_t] == 0) {
+							analogAlarmCount[i2_t]++; // analog alarimin say
+							if ((analogAlarmCount >= 10) && (analogFadeOut[i2_t] == 0)){ // 4 defe alarm verse analog alarimin yandir
+								alarmOnAnalog[i2_t] = 1;
+								sendData(analogInputID[i2_t]);
+								secondByte[i2_t] |= 1; // eger alarim oldusa 1 ci biti 1 ele
 								stationAlarm = notResetAlarm;	//alarm cixdi
-								HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13,
-										GPIO_PIN_SET); //alarm isigin yandir
-								analogAlarmCount[i * 2 + j] = 10; //analog sayicisi 4 e catdisa 4 de saxla
+								HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_SET); //alarm isigin yandir
+								analogAlarmCount[i2_t] = 10; //analog sayicisi 4 e catdisa 4 de saxla
 							}
 						}
 					} else {
-						analogAlarmCountDown[i * 2 + j]++;
-						if (analogAlarmCountDown[i * 2 + j] >= 10) {
-							analogAlarmCount[i * 2 + j] = 0; //alarim deyilse sayicini sifirla
-							alarmOnAnalog[i * 2 + j] = 0;
-							analogAlarmCountDown[i * 2 + j] = 10;
-							secondByte[i * 2 + j] &= ~2;
+						analogAlarmCountDown[i2_t]++;
+						if (analogAlarmCountDown[i2_t] >= 10) {
+							analogAlarmCount[i2_t] = 0; //alarim deyilse sayicini sifirla
+							alarmOnAnalog[i2_t] = 0;
+							analogAlarmCountDown[i2_t] = 10;
+							secondByte[i2_t] &= ~1;
 						}
 					}
-				} else if (analogConfigs[i * 2 + j].moreThen == 1) {
-					if (realVal[i * 2 + j]
-							> analogConfigs[i * 2 + j].alarmLevel) {
-						analogAlarmCountDown[i * 2 + j] = 0;
-						if (alarmOnAnalog[i * 2 + j] == 0) {
-							analogAlarmCount[i * 2 + j]++; // analog alarimin say
-							if ((analogAlarmCount >= 10)
-									&& (analogFadeOut[i * 2 + j] == 0)) // 4 defe alarm verse analog alarimin yandir
-									{
-								secondByte[i * 2 + j] |= 2; // eger alarim oldusa 1 ci biti 1 ele
-								alarmOnAnalog[i * 2 + j] = 1;
-								sendData(analogInputID[i * 2 + j]);
+				} else if (analogConfigs[i2_t].moreThen == 1) {
+					if (realVal[i2_t] > alarmLevel[i2_t]) {
+						analogAlarmCountDown[i2_t] = 0;
+						if (alarmOnAnalog[i2_t] == 0) {
+							analogAlarmCount[i2_t]++; // analog alarimin say
+							if ((analogAlarmCount >= 10) && (analogFadeOut[i2_t] == 0)){ // 4 defe alarm verse analog alarimin yandir
+								secondByte[i2_t] |= 1; // eger alarim oldusa 1 ci biti 1 ele
+								alarmOnAnalog[i2_t] = 1;
+								sendData(analogInputID[i2_t]);
 								stationAlarm = notResetAlarm;	//alarm cixdi
-								HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13,
-										GPIO_PIN_SET); //alarm isigin yandir
-								analogAlarmCount[i * 2 + j] = 10; //analog sayicisi 4 e catdisa 4 de saxla
+								HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_SET); //alarm isigin yandir
+								analogAlarmCount[i2_t] = 10; //analog sayicisi 4 e catdisa 4 de saxla
 							}
 						}
 					} else {
-						analogAlarmCountDown[i * 2 + j]++;
-						if (analogAlarmCountDown[i * 2 + j] >= 10) {
-							alarmOnAnalog[i * 2 + j] = 0;
-							analogAlarmCountDown[i * 2 + j] = 10;
-							analogAlarmCount[i * 2 + j] = 0; //alarim deyilse sayicini sifirla
-							secondByte[i * 2 + j] &= ~2;
+						analogAlarmCountDown[i2_t]++;
+						if (analogAlarmCountDown[i2_t] >= 10) {
+							alarmOnAnalog[i2_t] = 0;
+							analogAlarmCountDown[i2_t] = 10;
+							analogAlarmCount[i2_t] = 0; //alarim deyilse sayicini sifirla
+							secondByte[i2_t] &= ~1;
 						}
 					}
 				}
-				/*
-				 if(realVal[i*2+j] > analogConfigs[i*2+j].warningLevel)   //worning levele geldise
-				 {
-				 secondByte |=1;  // 0 ci biti 1 ele
-				 }
-				 */
-				if (analogFadeOut[i * 2 + j] == 1) {
-					secondByte[i * 2 + j] |= 4;
+				if (analogFadeOut[i2_t] == 1) {
+					secondByte[i2_t] |= 2;
 				} else {
-					secondByte[i * 2 + j] &= ~4;
+					secondByte[i2_t] &= ~2;
 				}
 
-				if (analogSignalFoult[i * 2 + j] == 1) {
-					secondByte[i * 2 + j] |= 8;
-				} else {
-					secondByte[i * 2 + j] &= ~8;
-				}
+				secondByte[i2_t] |= (int)(63/(analogConfigs[i2_t].maxRealVal)*alarmLevel[i2_t]) << 2;
 
-				secondWord[i * 2 + j] = (uint16_t) secondByte[i * 2 + j]
-						+ ((uint16_t) fractionPart[i * 2 + j]) * 256;
+				secondWord[i2_t] = (uint16_t) secondByte[i2_t] + ((uint16_t) fractionPart[i2_t]) * 256;
+				secondByte[i2_t] &= 0x03;
 
-				TxData[i][j * 2] = intPart[i * 2 + j];
-				TxData[i][j * 2 + 1] = secondWord[i * 2 + j];
+				TxData[i][t * 2] = intPart[i2_t];
+				TxData[i][t * 2 + 1] = secondWord[i2_t];
 
 			}
 
 			HAL_CAN_AddTxMessage(&hcan1, &TxHeader[i], TxData[i], &TxMailbox);
-			HAL_Delay(20);
+			HAL_Delay(60);
 
 		}
 
@@ -895,7 +823,7 @@ int main(void)
 		TxData[16][3] = digitalSum;
 
 		HAL_CAN_AddTxMessage(&hcan1, &TxHeader[12], TxData[12], &TxMailbox);
-		HAL_Delay(20);
+		HAL_Delay(60);
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -922,9 +850,8 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 4;
@@ -1137,68 +1064,6 @@ static void MX_I2C2_Init(void)
 }
 
 /**
-  * @brief RTC Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_RTC_Init(void)
-{
-
-  /* USER CODE BEGIN RTC_Init 0 */
-
-  /* USER CODE END RTC_Init 0 */
-
-  RTC_TimeTypeDef sTime = {0};
-  RTC_DateTypeDef sDate = {0};
-
-  /* USER CODE BEGIN RTC_Init 1 */
-
-  /* USER CODE END RTC_Init 1 */
-  /** Initialize RTC Only
-  */
-  hrtc.Instance = RTC;
-  hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
-  hrtc.Init.AsynchPrediv = 127;
-  hrtc.Init.SynchPrediv = 255;
-  hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
-  hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
-  hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
-  if (HAL_RTC_Init(&hrtc) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /* USER CODE BEGIN Check_RTC_BKUP */
-
-  /* USER CODE END Check_RTC_BKUP */
-
-  /** Initialize RTC and set the Time and Date
-  */
-  sTime.Hours = 0x14;
-  sTime.Minutes = 0x14;
-  sTime.Seconds = 0x30;
-  sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
-  sTime.StoreOperation = RTC_STOREOPERATION_RESET;
-  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sDate.WeekDay = RTC_WEEKDAY_TUESDAY;
-  sDate.Month = RTC_MONTH_JULY;
-  sDate.Date = 0x5;
-  sDate.Year = 0x22;
-
-  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN RTC_Init 2 */
-
-  /* USER CODE END RTC_Init 2 */
-
-}
-
-/**
   * @brief TIM6 Initialization Function
   * @param None
   * @retval None
@@ -1373,7 +1238,7 @@ void sendData(int inputId)						//
 	TxData[9][2] = 4;  /////////stansiya nomresi
 	//TxData[9][3]=4;
 	HAL_CAN_AddTxMessage(&hcan1, &TxHeader[9], TxData[9], &TxMailbox);
-	HAL_Delay(20);
+	HAL_Delay(60);
 }
 
 /* USER CODE END 4 */
