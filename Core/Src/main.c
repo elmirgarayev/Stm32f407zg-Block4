@@ -168,7 +168,7 @@ uint16_t contactState[28];
 uint16_t contactStateTot[5] = {0,0,0,0,0};
 uint16_t contactStateRead[5] = {0,0,0,0,0};
 uint16_t contactStateTest[28];
-uint16_t delaySeconds[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };//signal cixdiqdan sonra neqeder gozleyecek
+uint16_t delaySeconds[35] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };//signal cixdiqdan sonra neqeder gozleyecek
 uint16_t delaySecondsTot[40];
 uint16_t delaySecondsTotRead[40];
 uint16_t digitalInputId[28] = { 4065, 4066, 4067, 4068, 4069, 4070, 4071, 4072, 4073, 4074, 4075, 4076, 4077, 4078, 4079, 4080, 4081, 4082, 4083, 4084, 4085, 4086, 4087, 4088, 4089, 4090, 4091, 4092 };		//signal id leri
@@ -403,16 +403,14 @@ int main(void)
 	analogFadeOutTotRead[0] = EEPROM_Read_NUM(3, 0);
 
 	//analog ve digital fade outlari burda eepromdan yukle
-	for (int k = 0; k < 16; k++) {
-		fadeOut[k] = (fadeOutTotRead[0] >> k) & 1;
-		if (k < 12) {
-			fadeOut[k + 16] = (fadeOutTotRead[1] >> k) & 1;
+	for (int kk = 0; kk < 16; kk++) {
+		fadeOut[kk] = (fadeOutTotRead[0] >> kk) & 1;
+		if (kk < 12) {
+			fadeOut[kk + 16] = (fadeOutTotRead[1] >> kk) & 1;
 		}
-
-		if (k < 10) {
-			analogFadeOut[k] = (analogFadeOutTotRead[0] >> k) & 1;
+		if (kk < 10) {
+			analogFadeOut[kk] = (analogFadeOutTotRead[0] >> kk) & 1;
 		}
-
 	}
 
 	//analog alarmLevel leri burda eepromdan yukle
@@ -433,11 +431,9 @@ int main(void)
 		}
 	}
 
-
 	// delay secondsu eepromdan oxuma
-	for(int t=0;t<7;t++){
+	for(int t=0;t<4;t++){
 		for(int k=0;k<4;k++){
-
 			delaySecondsTotRead[t*4+k] = EEPROM_Read_NUM(20+t, 16*k);
 
 			delaySeconds[8*t+k*2] = (delaySecondsTotRead[t*4+k]) & 0xff;
@@ -492,7 +488,6 @@ int main(void)
 				if (t < 10) {
 					analogFadeOutTot[0] |= analogFadeOut[t] << t;
 				}
-
 			}
 
 			EEPROM_Write_NUM(1, 0, fadeOutTot[0]);
@@ -500,10 +495,7 @@ int main(void)
 
 			EEPROM_Write_NUM(3, 0, analogFadeOutTot[0]);
 
-			fadeOutTotReadTest[0] = EEPROM_Read_NUM(1, 0);
-			fadeOutTotReadTest[1] = EEPROM_Read_NUM(2, 0);
 
-			analogFadeOutTotReadTest[0] = EEPROM_Read_NUM(3, 0);
 
 			contactStateTot[0] = 0;
 			contactStateTot[1] = 0;
@@ -537,7 +529,7 @@ int main(void)
 
 			/////////delay secondsu eeproma yazma
 
-			for(int t=0;t<9;t++){
+			for(int t=0;t<7;t++){
 				for(int k=0;k<4;k++){
 					delaySecondsTot[t*4+k] |= delaySeconds[8*t+k*2]<<0;
 					delaySecondsTot[t*4+k] |= delaySeconds[8*t+k*2+1]<<8;
@@ -546,21 +538,27 @@ int main(void)
 					delaySecondsTot[t*4+k] = 0;
 				}
 			}
-
 			fadeOutReg = 0;
 		}
+
+
+
+		/*  yoxlamaq ucun oxumag edirdim
+		fadeOutTotReadTest[0] = EEPROM_Read_NUM(1, 0);
+		fadeOutTotReadTest[1] = EEPROM_Read_NUM(2, 0);
+
+		analogFadeOutTotReadTest[0] = EEPROM_Read_NUM(3, 0);
 
 		for (int k = 0; k < 16; k++) {
 			fadeOutBaxmaq[k] = (fadeOutTotReadTest[0] >> k) & 1;
 			if (k < 12) {
 				fadeOutBaxmaq[k + 16] = (fadeOutTotReadTest[1] >> k) & 1;
 			}
-
 			if (k < 10) {
 				analogFadeOutBaxmaq[k] = (analogFadeOutTotReadTest[0] >> k) & 1;
 			}
-
 		}
+		*/
 
 		////////////////////////////////////////////////mux u saydir adc ve dig deyerlri yolla/////////////////////////////////////////////////////
 		for (int t = 0; t < 16; ++t) {
