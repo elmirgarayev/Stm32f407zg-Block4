@@ -1,0 +1,8 @@
+EEPROM.c:41:10:bytestowrite	0	static
+EEPROM.c:53:6:EEPROM_Write	56	static
+EEPROM.c:87:6:float2Bytes	8	static
+EEPROM.c:102:7:Bytes2float	8	static
+EEPROM.c:124:6:EEPROM_Write_NUM	16	static
+EEPROM.c:153:6:EEPROM_Read	56	static
+EEPROM.c:138:7:EEPROM_Read_NUM	16	static
+EEPROM.c:179:6:EEPROM_PageErase	88	static
