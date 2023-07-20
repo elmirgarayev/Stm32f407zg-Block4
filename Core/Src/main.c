@@ -434,7 +434,7 @@ int main(void) {
 
 	//analog alarmLevel leri burda eepromdan yukle
 	for (int k = 0; k < 10; k++) {
-		alarmLevel[k] = EEPROM_Read_NUM(8, 4 * k);
+		alarmLevel[k] = EEPROM_Read_NUM(8+k, k);
 	}
 
 	contactStateRead[0] = EEPROM_Read_NUM(10, 0);
@@ -483,8 +483,8 @@ int main(void) {
 		// bu hissede eger alarm level deyisibse yollayirq
 		if (alarmLevelRecivedFlag == 1) {
 			for (int k = 0; k < 10; k++) {
-				EEPROM_Write_NUM(8, 4 * k, alarmLevel[k]);
-				alarmLevelRead[k] = EEPROM_Read_NUM(8, 4 * k);
+				EEPROM_Write_NUM(8+k, k, alarmLevel[k]);
+				alarmLevelRead[k] = EEPROM_Read_NUM(8+k, k);
 			}
 			HAL_CAN_AddTxMessage(&hcan1, &TxHeader[28], TxData[28], &TxMailbox);
 			HAL_Delay(1);
