@@ -686,7 +686,7 @@ int main(void)
 							}
 						} else {
 							alarmCount[k]++;//n defe alarm cixidigin yoxlayan sayici
-							if (alarmCount[k] > 4) {		//4 defe cixdisa gir
+							if (alarmCount[k] > 2) {		//2 defe cixdisa gir
 								if ((delaySeconds[k] == 0)
 										&& (fadeOut[k] == 0)) {	//saniye sayan 0 disa gir
 									alarmOn[k] = 1;				//alari yandir
@@ -1249,16 +1249,17 @@ static void MX_GPIO_Init(void)
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if (htim == &htim6) {
-		//HAL_GPIO_TogglePin(GPIOF, GPIO_PIN_13);
-		for (int h = 0; h < 16; h++) {
+		for (int h = 0; h < 28; h++) {
 			if (waitingForDelay[h] == 1) {
 				delaySecondsCount[h]++;
-				if (delaySecondsCount[h] >= 50) {
-					//delaySecondsCount[h] = 50;
+				if (delaySecondsCount[h] >= 255) {
+					delaySecondsCount[h] = 255;
+				}
+				if (delaySecondsCountForOff[h] > 0) {
+					delaySecondsCountForOff[h] -= 1;
 				}
 			}
 		}
-
 	}
 }
 
