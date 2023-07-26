@@ -97,7 +97,6 @@ enum alarm_state {
 };
 
 int tamHisse = 0, kesirHisse = 0;
-int say = 0;
 
 ////////////////////mux u saydir/////////////////////////////////////////////////////////////////////////////////
 void mux(int sel) {
@@ -681,8 +680,7 @@ int main(void)
 								delaySecondsCountForOff[k] = 16; //alarmi sonudrmek ucun olan sayicini 5 ele
 								sendData(digitalInputId[k]);				//
 								stationAlarm = notResetAlarm;//alarimi yandir signal cixdi deye
-								HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13,
-										GPIO_PIN_SET);	//alarim isigin yandir
+								HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_SET);	//alarim isigin yandir
 								waitingForDelay[k] = 0;	//delay ucun gozdeme sayicisin sifirla
 							}
 						} else {
@@ -694,8 +692,7 @@ int main(void)
 									delaySecondsCountForOff[k] = 16; //alarmi sonudrmek ucun olan sayicini 5 ele
 									sendData(digitalInputId[k]);
 									stationAlarm = notResetAlarm;//alarimi yandir signal cixdi deye
-									HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13,
-											GPIO_PIN_SET);//alarim isigin yandir
+									HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_SET);//alarim isigin yandir
 								} else {
 									waitingForDelay[k] = 1;	//sayci ucun gozdeme regisitiri
 								}
@@ -709,7 +706,6 @@ int main(void)
 					if (delaySecondsCountForOff[k] == 0) {
 						alarmOn[k] = 0;
 					}
-					alarmOn[k] = 0;
 					alarmCount[k] = 0;
 					waitingForDelay[k] = 0;
 					delaySecondsCount[k] = 0;
@@ -729,19 +725,6 @@ int main(void)
 			stationAlarm = resetAlarm;						//alarmi reset et
 			HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_RESET);//ve sondur alarmi
 			recivedReset = 0;				//compyuterden gelen reseti sifirla
-			say = 3;
-		}
-
-		if (say != 0) {
-			TxData[21][1] = 3;
-			say--;
-			for (int hh = 0; hh < 10; hh++) {
-				HAL_CAN_AddTxMessage(&hcan1, &TxHeader[21], TxData[21],
-						&TxMailbox);
-				HAL_Delay(60);
-			}
-		} else {
-			TxData[21][1] = 0;
 		}
 
 		TxData[21][0] = stationAlarm;
@@ -1260,9 +1243,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 				if (delaySecondsCount[h] >= 255) {
 					delaySecondsCount[h] = 255;
 				}
-				if (delaySecondsCountForOff[h] > 0) {
-					delaySecondsCountForOff[h] -= 1;
-				}
+			}
+			if (delaySecondsCountForOff[h] > 0) {
+				delaySecondsCountForOff[h] -= 1;
 			}
 		}
 	}
