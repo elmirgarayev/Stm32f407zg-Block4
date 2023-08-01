@@ -677,7 +677,7 @@ int main(void)
 							if ((delaySeconds[k] <= delaySecondsCount[k])
 									&& (fadeOut[k] == 0)) { // qoyulan vaxda catdisa
 								alarmOn[k] = 1;                  //alarmi yandir
-								delaySecondsCountForOff[k] = 16; //alarmi sonudrmek ucun olan sayicini 5 ele
+								delaySecondsCountForOff[k] = 40; //alarmi sonudrmek ucun olan sayicini 5 ele
 								sendData(digitalInputId[k]);				//
 								stationAlarm = notResetAlarm;//alarimi yandir signal cixdi deye
 								HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_SET);	//alarim isigin yandir
@@ -689,7 +689,7 @@ int main(void)
 								if ((delaySeconds[k] == 0)
 										&& (fadeOut[k] == 0)) {	//saniye sayan 0 disa gir
 									alarmOn[k] = 1;				//alari yandir
-									delaySecondsCountForOff[k] = 16; //alarmi sonudrmek ucun olan sayicini 5 ele
+									delaySecondsCountForOff[k] = 40; //alarmi sonudrmek ucun olan sayicini 5 ele
 									sendData(digitalInputId[k]);
 									stationAlarm = notResetAlarm;//alarimi yandir signal cixdi deye
 									HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_SET);//alarim isigin yandir
