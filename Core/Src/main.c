@@ -235,11 +235,40 @@ uint8_t fractionPart[50];
 
 uint16_t secondWord[50];
 
+int allAlarmsArr[100];
+uint16_t wantedArr[100];
+
 float realVal[50];
 float voltValIncorrect[50];
 float voltVal[50];
 
 int recivedID = 0;
+
+uint16_t recivedRangeStart = 0;
+uint16_t recivedRangeEnd = 0;
+uint8_t recivedRangeFlag = 0;
+
+const int MAX_NUMBERS = 100;  // Max numbers to store
+const int INDEX_ADDRESS = MAX_NUMBERS;  // Store the index at the 101st byte of EEPROM
+const int offset = 100;
+uint16_t sentAlarmId, sentAlarmFlag=0;
+
+void storeAlarm(uint16_t idNumber){
+
+	uint16_t currentIndex=0;
+	currentIndex = EEPROM_Read_NUM(INDEX_ADDRESS+offset, 0);
+	EEPROM_Write_NUM(currentIndex+offset, 0, idNumber);
+	//allAlarmsArr[0] = EEPROM_Read_NUM(currentIndex+offset, 0);
+	currentIndex++;
+
+	if(currentIndex >= MAX_NUMBERS){
+		currentIndex = 0;
+	}
+
+	EEPROM_Write_NUM(INDEX_ADDRESS+offset, 0, currentIndex);
+
+}
+
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1) {
 
@@ -317,7 +346,70 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1) {
 		}
 	}
 
+	// 1ci stansiyadan gelen alarm bilgisin qebul ele
+	if (RxHeader.StdId == 0x10E) {
+		sentAlarmFlag = 1;
+		sentAlarmId=(uint16_t)RxData[0] + (uint16_t)(RxData[1] << 8);
+	}
+	// 2ci stansiyadan gelen alarm bilgisin qebul ele
+	if (RxHeader.StdId == 0x251) {
+		sentAlarmFlag = 1;
+		sentAlarmId=(uint16_t)RxData[0] + (uint16_t)(RxData[1] << 8);
+	}
+	// 3ci stansiyadan gelen alarm bilgisin qebul ele
+	if (RxHeader.StdId == 0x315) {
+		sentAlarmFlag = 1;
+		sentAlarmId=(uint16_t)RxData[0] + (uint16_t)(RxData[1] << 8);
+	}
+
+	if (RxHeader.StdId == 0x660) {
+
+		recivedRangeStart = (uint16_t) (RxData[0]) + ((uint16_t) (RxData[1]) << 8);
+		recivedRangeEnd = (uint16_t) (RxData[3]) + ((uint16_t) (RxData[2]) << 8);
+		recivedRangeFlag = 1;
+	}
+
 }
+
+void printStoredNumbers() {
+	uint16_t currentIndex = EEPROM_Read_NUM(INDEX_ADDRESS+offset, 0);
+	uint16_t sayiciS=0;
+
+	if(currentIndex == 0){
+		allAlarmsArr[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offset-1, 0);
+		sayiciS++;
+	}
+	else{
+		allAlarmsArr[sayiciS] = EEPROM_Read_NUM(currentIndex+offset-1, 0);
+		sayiciS++;
+	}
+  for (int i = currentIndex - 2; i >= 0; i--) {
+	  allAlarmsArr[sayiciS] = EEPROM_Read_NUM(i+offset, 0);
+	  sayiciS++;
+  }
+
+  // Print numbers from start to currentIndex
+  for (int i = MAX_NUMBERS - 1; i > currentIndex - 1; i--) {
+	  allAlarmsArr[sayiciS] = EEPROM_Read_NUM(i+offset, 0);
+	  sayiciS++;
+  }
+}
+
+// Retrieve and take numbers in the range [start, end] from the circular buffer.
+void cutNumbersInRange(int start, int end) {
+  if (start < 1 || end > MAX_NUMBERS || start > end) {
+    return;
+  }
+
+  // Adjust indices to 0-based
+  start--;
+  end--;
+
+  for (int i = start; i <= end; i++) {
+    wantedArr[i-start] = allAlarmsArr[i];
+  }
+}
+
 
 //float alarmLevel[25] = {95, 95, 95, 95, 95, 95, 95, 95, 95, 95, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70};
 
@@ -413,10 +505,14 @@ int main(void)
 
 	void sendData(int inputId)						//
 	{
-		TxData[9][0] = inputId;  ////giris nomresi
-		//TxData[9][1]=(uint16_t)seconds;
-		TxData[9][2] = 4;  /////////stansiya nomresi
-		//TxData[9][3]=4;
+		TxData[9][0] = inputId;
+		TxData[9][1] = inputId >> 8;
+		TxData[9][2] = 0;
+		TxData[9][3] = 0;
+		TxData[9][4] = 0;
+		TxData[9][5] = 0;
+		TxData[9][6] = 0;
+		TxData[9][7] = 0;
 		HAL_CAN_AddTxMessage(&hcan1, &TxHeader[9], TxData[9], &TxMailbox);
 		HAL_Delay(60);
 	}
@@ -477,6 +573,34 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+		if(recivedRangeFlag == 1){
+			cutNumbersInRange(recivedRangeStart, recivedRangeEnd);
+			for(int sayiciI = 0; sayiciI < (recivedRangeStart - recivedRangeEnd); sayiciI++){
+				TxData[5][0] = (uint8_t)wantedArr[sayiciI];
+				TxData[5][1] = (uint8_t)(wantedArr[sayiciI] >> 8);
+				TxData[5][2] = (uint8_t)(recivedRangeEnd + sayiciI); //bura yaz  nececi oldugun lower side
+				TxData[5][3] = (uint8_t)((recivedRangeEnd + sayiciI) >> 8); //bura yaz  nececi oldugun higher side
+				TxData[5][4] = 0;
+				TxData[5][5] = 0;
+				TxData[5][6] = 0;
+				TxData[5][7] = 0;
+
+				HAL_CAN_AddTxMessage(&hcan1, &TxHeader[5], TxData[5], &TxMailbox); //5 bosda idi isletdim
+				HAL_Delay(2);
+				HAL_CAN_AddTxMessage(&hcan1, &TxHeader[5], TxData[5], &TxMailbox); //5 bosda idi isletdim
+				HAL_Delay(2);
+			}
+		}
+
+		if(sentAlarmFlag == 1){
+			storeAlarm(sentAlarmId);
+			HAL_Delay(5);
+			sentAlarmFlag = 0;
+			printStoredNumbers();
+			cutNumbersInRange(20,30);
+		}
+
 
 		if (prencereAcilmaFlag == 1) {
 			HAL_CAN_AddTxMessage(&hcan1, &TxHeader[29], TxData[29], &TxMailbox);
@@ -684,6 +808,8 @@ int main(void)
 								alarmOn[k] = 1;                  //alarmi yandir
 								delaySecondsCountForOff[k] = 40; //alarmi sonudrmek ucun olan sayicini 5 ele
 								sendData(digitalInputId[k]);				//
+								sentAlarmFlag = 1;
+								sentAlarmId=digitalInputId[k];
 								stationAlarm = notResetAlarm;//alarimi yandir signal cixdi deye
 								HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_SET);	//alarim isigin yandir
 								waitingForDelay[k] = 0;	//delay ucun gozdeme sayicisin sifirla
@@ -696,6 +822,8 @@ int main(void)
 									alarmOn[k] = 1;				//alari yandir
 									delaySecondsCountForOff[k] = 40; //alarmi sonudrmek ucun olan sayicini 5 ele
 									sendData(digitalInputId[k]);
+									sentAlarmFlag = 1;
+									sentAlarmId=digitalInputId[k];
 									stationAlarm = notResetAlarm;//alarimi yandir signal cixdi deye
 									HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_SET);//alarim isigin yandir
 								} else {
@@ -780,6 +908,8 @@ int main(void)
 									&& (analogFadeOut[i2_t] == 0)) { // 4 defe alarm verse analog alarimin yandir
 								alarmOnAnalog[i2_t] = 1;
 								sendData(analogInputID[i2_t]);
+								sentAlarmFlag = 1;
+								sentAlarmId=analogInputID[i2_t];
 								secondByte[i2_t] |= 1; // eger alarim oldusa 1 ci biti 1 ele
 								stationAlarm = notResetAlarm;	//alarm cixdi
 								HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13,
@@ -806,6 +936,8 @@ int main(void)
 								secondByte[i2_t] |= 1; // eger alarim oldusa 1 ci biti 1 ele
 								alarmOnAnalog[i2_t] = 1;
 								sendData(analogInputID[i2_t]);
+								sentAlarmFlag = 1;
+								sentAlarmId=analogInputID[i2_t];
 								stationAlarm = notResetAlarm;	//alarm cixdi
 								HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13,
 										GPIO_PIN_SET); //alarm isigin yandir
