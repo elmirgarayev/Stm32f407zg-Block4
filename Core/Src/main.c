@@ -87,6 +87,10 @@ float alarmLevelRead[25] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
 float alarmLevel[25];
 
+int delayTime = 5;
+
+int sendCountCheck[13];
+
 int i2_t = 0;
 
 uint16_t message[62];
@@ -250,22 +254,22 @@ uint8_t recivedRangeFlag = 0;
 
 const int MAX_NUMBERS = 100;  // Max numbers to store
 const int INDEX_ADDRESS = MAX_NUMBERS;  // Store the index at the 101st byte of EEPROM
-const int offset = 100;
+const int offset = 100;		//buna qeder doluluq var flash memoryde.
 uint16_t sentAlarmId, sentAlarmFlag=0;
 
 void storeAlarm(uint16_t idNumber){
 
 	uint16_t currentIndex=0;
-	currentIndex = EEPROM_Read_NUM(INDEX_ADDRESS+offset, 0);
-	EEPROM_Write_NUM(currentIndex+offset, 0, idNumber);
+	currentIndex = EEPROM_Read_NUM(INDEX_ADDRESS+offset, 0);	//indeksin deyerin oxu
+	EEPROM_Write_NUM(currentIndex+offset, 0, idNumber);			//siradaki indekse idnomresin yaz
 	//allAlarmsArr[0] = EEPROM_Read_NUM(currentIndex+offset, 0);
-	currentIndex++;
+	currentIndex++;		//indeksi artirki diger adrese yazsin
 
-	if(currentIndex >= MAX_NUMBERS){
+	if(currentIndex >= MAX_NUMBERS){		//eger kecirse limiti indeksi yeniden baslat
 		currentIndex = 0;
 	}
 
-	EEPROM_Write_NUM(INDEX_ADDRESS+offset, 0, currentIndex);
+	EEPROM_Write_NUM(INDEX_ADDRESS+offset, 0, currentIndex);		//indeksi yaddasa ya
 
 }
 
@@ -365,7 +369,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1) {
 	if (RxHeader.StdId == 0x660) {
 
 		recivedRangeStart = (uint16_t) (RxData[0]) + ((uint16_t) (RxData[1]) << 8);
-		recivedRangeEnd = (uint16_t) (RxData[3]) + ((uint16_t) (RxData[2]) << 8);
+		recivedRangeEnd = (uint16_t) (RxData[2]) + ((uint16_t) (RxData[3]) << 8);
 		recivedRangeFlag = 1;
 	}
 
@@ -397,15 +401,16 @@ void printStoredNumbers() {
 
 // Retrieve and take numbers in the range [start, end] from the circular buffer.
 void cutNumbersInRange(int start, int end) {
-  if (start < 1 || end > MAX_NUMBERS || start > end) {
+  /*
+	if (start < 1 || end > MAX_NUMBERS || start > end) {
     return;
   }
 
   // Adjust indices to 0-based
   start--;
   end--;
-
-  for (int i = start; i <= end; i++) {
+*/
+  for (int i = start; i < end; i++) {
     wantedArr[i-start] = allAlarmsArr[i];
   }
 }
@@ -514,6 +519,7 @@ int main(void)
 		TxData[9][6] = 0;
 		TxData[9][7] = 0;
 		HAL_CAN_AddTxMessage(&hcan1, &TxHeader[9], TxData[9], &TxMailbox);
+		//HAL_Delay(delayTime);
 		HAL_Delay(60);
 	}
 
@@ -576,21 +582,24 @@ int main(void)
 
 		if(recivedRangeFlag == 1){
 			cutNumbersInRange(recivedRangeStart, recivedRangeEnd);
-			for(int sayiciI = 0; sayiciI < (recivedRangeStart - recivedRangeEnd); sayiciI++){
+			for(int sayiciI = 0; sayiciI < (recivedRangeEnd - recivedRangeStart); sayiciI++){
 				TxData[5][0] = (uint8_t)wantedArr[sayiciI];
 				TxData[5][1] = (uint8_t)(wantedArr[sayiciI] >> 8);
-				TxData[5][2] = (uint8_t)(recivedRangeEnd + sayiciI); //bura yaz  nececi oldugun lower side
-				TxData[5][3] = (uint8_t)((recivedRangeEnd + sayiciI) >> 8); //bura yaz  nececi oldugun higher side
+				TxData[5][2] = (uint8_t)(recivedRangeStart + sayiciI); //bura yaz  nececi oldugun lower side
+				TxData[5][3] = (uint8_t)((recivedRangeStart + sayiciI) >> 8); //bura yaz  nececi oldugun higher side
 				TxData[5][4] = 0;
 				TxData[5][5] = 0;
 				TxData[5][6] = 0;
 				TxData[5][7] = 0;
 
-				HAL_CAN_AddTxMessage(&hcan1, &TxHeader[5], TxData[5], &TxMailbox); //5 bosda idi isletdim
-				HAL_Delay(2);
-				HAL_CAN_AddTxMessage(&hcan1, &TxHeader[5], TxData[5], &TxMailbox); //5 bosda idi isletdim
-				HAL_Delay(2);
+				//for(int i=0; i<30; i++){
+					HAL_CAN_AddTxMessage(&hcan1, &TxHeader[5], TxData[5], &TxMailbox); //5 bosda idi isletdim
+					HAL_Delay(20);
+				//}
+
 			}
+
+			recivedRangeFlag = 0;
 		}
 
 		if(sentAlarmFlag == 1){
@@ -598,7 +607,7 @@ int main(void)
 			HAL_Delay(5);
 			sentAlarmFlag = 0;
 			printStoredNumbers();
-			cutNumbersInRange(20,30);
+			//cutNumbersInRange(20,30);
 		}
 
 
@@ -865,8 +874,15 @@ int main(void)
 		TxData[21][2] = stationAlarm;
 		TxData[21][3] = stationAlarm;
 
-		HAL_CAN_AddTxMessage(&hcan1, &TxHeader[21], TxData[21], &TxMailbox);
-		HAL_Delay(60);
+		if(sendCountCheck[10] >= 10){
+			HAL_CAN_AddTxMessage(&hcan1, &TxHeader[21], TxData[21], &TxMailbox);
+			HAL_Delay(delayTime);
+			sendCountCheck[10] = 0;
+		}
+		else{
+			sendCountCheck[10]++;
+		}
+
 
 		TxData[8][0] = digitalSum[0];
 		TxData[8][1] = digitalSum[0] >> 8;
@@ -877,8 +893,15 @@ int main(void)
 		TxData[8][6] = digitalSum[3];
 		TxData[8][7] = digitalSum[3] >> 8;
 
-		HAL_CAN_AddTxMessage(&hcan1, &TxHeader[8], TxData[8], &TxMailbox);
-		HAL_Delay(60);
+		if(sendCountCheck[11] >= 10){
+			HAL_CAN_AddTxMessage(&hcan1, &TxHeader[8], TxData[8], &TxMailbox);
+			HAL_Delay(delayTime);
+			sendCountCheck[11] = 0;
+		}
+		else{
+			sendCountCheck[11]++;
+		}
+
 
 		digitalSum[0] = 0;
 		digitalSum[1] = 0;
@@ -974,8 +997,15 @@ int main(void)
 
 			}
 
-			HAL_CAN_AddTxMessage(&hcan1, &TxHeader[i], TxData[i], &TxMailbox);
-			HAL_Delay(60);
+			if(sendCountCheck[i] >= 10){
+				HAL_CAN_AddTxMessage(&hcan1, &TxHeader[i], TxData[i], &TxMailbox);
+				HAL_Delay(delayTime);
+				sendCountCheck[i] = 0;
+			}
+			else{
+				sendCountCheck[i]++;
+			}
+
 
 		}
 
@@ -987,7 +1017,7 @@ int main(void)
 
 		 //bu neyi yollayir bilmedim arasdir
 		 HAL_CAN_AddTxMessage(&hcan1, &TxHeader[12], TxData[12], &TxMailbox);
-		 HAL_Delay(60);
+		 HAL_Delay(delayTime);
 		 */
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//  HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_0);
