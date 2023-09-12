@@ -1,11 +1,10 @@
-main.c:511:7:sendData	8	static
+main.c:513:7:sendData	8	static
 main.c:106:6:mux	8	static
 main.c:118:6:check_channels	32	static
 main.c:260:6:storeAlarm	16	static
 main.c:277:6:HAL_CAN_RxFifo0MsgPendingCallback	56	static
 main.c:378:6:printStoredNumbers	24	static
-main.c:403:6:cutNumbersInRange	8	static
-main.c:1033:6:SystemClock_Config	88	static,ignoring_inline_asm
-main.c:454:5:main	136	static,ignoring_inline_asm
-main.c:1411:6:HAL_TIM_PeriodElapsedCallback	12	static
-main.c:1433:6:Error_Handler	0	static,ignoring_inline_asm
+main.c:1039:6:SystemClock_Config	88	static,ignoring_inline_asm
+main.c:456:5:main	136	static,ignoring_inline_asm
+main.c:1417:6:HAL_TIM_PeriodElapsedCallback	12	static
+main.c:1439:6:Error_Handler	0	static,ignoring_inline_asm

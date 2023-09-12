@@ -239,7 +239,7 @@ uint8_t fractionPart[50];
 
 uint16_t secondWord[50];
 
-int allAlarmsArr[100];
+uint16_t allAlarmsArr[100];
 uint16_t wantedArr[100];
 
 float realVal[50];
@@ -399,8 +399,9 @@ void printStoredNumbers() {
   }
 }
 
+
 // Retrieve and take numbers in the range [start, end] from the circular buffer.
-void cutNumbersInRange(int start, int end) {
+//void cutNumbersInRange(int start, int end) {
   /*
 	if (start < 1 || end > MAX_NUMBERS || start > end) {
     return;
@@ -410,11 +411,12 @@ void cutNumbersInRange(int start, int end) {
   start--;
   end--;
 */
+/*
   for (int i = start; i < end; i++) {
     wantedArr[i-start] = allAlarmsArr[i];
   }
 }
-
+*/
 
 //float alarmLevel[25] = {95, 95, 95, 95, 95, 95, 95, 95, 95, 95, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70};
 
@@ -581,12 +583,13 @@ int main(void)
     /* USER CODE BEGIN 3 */
 
 		if(recivedRangeFlag == 1){
-			cutNumbersInRange(recivedRangeStart, recivedRangeEnd);
-			for(int sayiciI = 0; sayiciI < (recivedRangeEnd - recivedRangeStart); sayiciI++){
-				TxData[5][0] = (uint8_t)wantedArr[sayiciI];
-				TxData[5][1] = (uint8_t)(wantedArr[sayiciI] >> 8);
-				TxData[5][2] = (uint8_t)(recivedRangeStart + sayiciI); //bura yaz  nececi oldugun lower side
-				TxData[5][3] = (uint8_t)((recivedRangeStart + sayiciI) >> 8); //bura yaz  nececi oldugun higher side
+			//cutNumbersInRange(recivedRangeStart, recivedRangeEnd);
+			//for(int sayiciI = 0; sayiciI < (recivedRangeEnd - recivedRangeStart); sayiciI++){
+
+				TxData[5][0] = (uint8_t)allAlarmsArr[recivedRangeStart];
+				TxData[5][1] = (uint8_t)(allAlarmsArr[recivedRangeStart] >> 8);
+				TxData[5][2] = (uint8_t)(recivedRangeStart); //bura yaz  nececi oldugun lower side
+				TxData[5][3] = (uint8_t)((recivedRangeStart) >> 8); //bura yaz  nececi oldugun higher side
 				TxData[5][4] = 0;
 				TxData[5][5] = 0;
 				TxData[5][6] = 0;
@@ -597,7 +600,7 @@ int main(void)
 					HAL_Delay(20);
 				//}
 
-			}
+			//}
 
 			recivedRangeFlag = 0;
 		}
@@ -608,6 +611,9 @@ int main(void)
 			sentAlarmFlag = 0;
 			printStoredNumbers();
 			//cutNumbersInRange(20,30);
+
+			HAL_CAN_AddTxMessage(&hcan1, &TxHeader[6], TxData[6], &TxMailbox); //5 bosda idi isletdim
+			HAL_Delay(20);
 		}
 
 
