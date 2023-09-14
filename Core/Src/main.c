@@ -82,8 +82,8 @@ void set_time(void)
 	  RTC_DateTypeDef sDate = {0};
 	  /** Initialize RTC and set the Time and Date
 	  */
-	  sTime.Hours = 14;
-	  sTime.Minutes = 54;
+	  sTime.Hours = 13;
+	  sTime.Minutes = 30;
 	  sTime.Seconds = 0;
 	  sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
 	  sTime.StoreOperation = RTC_STOREOPERATION_RESET;
@@ -91,9 +91,9 @@ void set_time(void)
 	  {
 	    Error_Handler();
 	  }
-	  sDate.WeekDay = RTC_WEEKDAY_MONDAY;
+	  sDate.WeekDay = RTC_WEEKDAY_THURSDAY;
 	  sDate.Month = RTC_MONTH_SEPTEMBER;
-	  sDate.Date = 12;
+	  sDate.Date = 14;
 	  sDate.Year = 23;
 
 	  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK)
@@ -108,7 +108,7 @@ void set_time(void)
 RTC_DateTypeDef gDate;
 RTC_TimeTypeDef gTime;
 
-int year,month,day,hour,minute,second;
+uint8_t year,month,day,hour,minute,second;
 
 #define DEV_ADDR 0xa0
 
@@ -279,6 +279,11 @@ uint16_t secondWord[50];
 
 uint16_t allAlarmsArr[100];
 uint16_t wantedArr[100];
+uint8_t allYear[100];
+uint8_t allMonth[100];
+uint8_t allDay[100];
+uint8_t allHour[100];
+uint8_t allMinute[100];
 
 float realVal[50];
 float voltValIncorrect[50];
@@ -294,12 +299,19 @@ const int MAX_NUMBERS = 100;  // Max numbers to store
 const int INDEX_ADDRESS = MAX_NUMBERS;  // Store the index at the 101st byte of EEPROM
 const int offset = 100;		//buna qeder doluluq var flash memoryde.
 uint16_t sentAlarmId, sentAlarmFlag=0;
+int surusdur=4;
 
-void storeAlarm(uint16_t idNumber){
+void storeAlarm(uint16_t idNumber, uint8_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute){
 
 	uint16_t currentIndex=0;
 	currentIndex = EEPROM_Read_NUM(INDEX_ADDRESS+offset, 0);	//indeksin deyerin oxu
-	EEPROM_Write_NUM(currentIndex+offset, 0, idNumber);			//siradaki indekse idnomresin yaz
+	EEPROM_Write_NUM(currentIndex+offset, 0 , idNumber);			//siradaki indekse idnomresin yaz
+	EEPROM_Write_NUM(currentIndex+offset, 16 , year);			//siradaki indekse year yaz
+	EEPROM_Write_NUM(currentIndex+offset, 24 , month);			//siradaki indekse month yaz
+	EEPROM_Write_NUM(currentIndex+offset, 32 , day);			//siradaki indekse day yaz
+	EEPROM_Write_NUM(currentIndex+offset, 40 , hour);			//siradaki indekse hour yaz
+	EEPROM_Write_NUM(currentIndex+offset, 48 , minute);			//siradaki indekse minute yaz
+
 	//allAlarmsArr[0] = EEPROM_Read_NUM(currentIndex+offset, 0);
 	currentIndex++;		//indeksi artirki diger adrese yazsin
 
@@ -307,7 +319,7 @@ void storeAlarm(uint16_t idNumber){
 		currentIndex = 0;
 	}
 
-	EEPROM_Write_NUM(INDEX_ADDRESS+offset, 0, currentIndex);		//indeksi yaddasa ya
+	EEPROM_Write_NUM(INDEX_ADDRESS+offset, 0 , currentIndex);		//indeksi yaddasa ya
 
 }
 
@@ -414,25 +426,46 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1) {
 }
 
 void printStoredNumbers() {
-	uint16_t currentIndex = EEPROM_Read_NUM(INDEX_ADDRESS+offset, 0);
+	uint16_t currentIndex = EEPROM_Read_NUM(INDEX_ADDRESS+offset, 0 );
 	uint16_t sayiciS=0;
 
 	if(currentIndex == 0){
-		allAlarmsArr[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offset-1, 0);
+		allAlarmsArr[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offset-1, 0 );
+		allYear[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offset-1, 16 );
+		allMonth[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offset-1, 24 );
+		allDay[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offset-1, 32 );
+		allHour[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offset-1, 40 );
+		allMinute[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offset-1, 48 );
 		sayiciS++;
 	}
 	else{
-		allAlarmsArr[sayiciS] = EEPROM_Read_NUM(currentIndex+offset-1, 0);
+		allAlarmsArr[sayiciS] = EEPROM_Read_NUM(currentIndex+offset-1, 0 );
+		allAlarmsArr[sayiciS] = EEPROM_Read_NUM(currentIndex+offset-1, 0 );
+		allYear[sayiciS] = EEPROM_Read_NUM(currentIndex+offset-1, 16 );
+		allMonth[sayiciS] = EEPROM_Read_NUM(currentIndex+offset-1, 24 );
+		allDay[sayiciS] = EEPROM_Read_NUM(currentIndex+offset-1, 32 );
+		allHour[sayiciS] = EEPROM_Read_NUM(currentIndex+offset-1, 40 );
+		allMinute[sayiciS] = EEPROM_Read_NUM(currentIndex+offset-1, 48 );
 		sayiciS++;
 	}
   for (int i = currentIndex - 2; i >= 0; i--) {
-	  allAlarmsArr[sayiciS] = EEPROM_Read_NUM(i+offset, 0);
+	  allAlarmsArr[sayiciS] = EEPROM_Read_NUM(i+offset, 0 );
+		allYear[sayiciS] = EEPROM_Read_NUM(i+offset, 16 );
+		allMonth[sayiciS] = EEPROM_Read_NUM(i+offset, 24 );
+		allDay[sayiciS] = EEPROM_Read_NUM(i+offset, 32 );
+		allHour[sayiciS] = EEPROM_Read_NUM(i+offset, 40 );
+		allMinute[sayiciS] = EEPROM_Read_NUM(i+offset, 48 );
 	  sayiciS++;
   }
 
   // Print numbers from start to currentIndex
   for (int i = MAX_NUMBERS - 1; i > currentIndex - 1; i--) {
-	  allAlarmsArr[sayiciS] = EEPROM_Read_NUM(i+offset, 0);
+	  allAlarmsArr[sayiciS] = EEPROM_Read_NUM(i+offset, 0 );
+		allYear[sayiciS] = EEPROM_Read_NUM(i+offset, 16 );
+		allMonth[sayiciS] = EEPROM_Read_NUM(i+offset, 24 );
+		allDay[sayiciS] = EEPROM_Read_NUM(i+offset, 32 );
+		allHour[sayiciS] = EEPROM_Read_NUM(i+offset, 40 );
+		allMinute[sayiciS] = EEPROM_Read_NUM(i+offset, 48 );
 	  sayiciS++;
   }
 }
@@ -523,8 +556,7 @@ int main(void)
   MX_RTC_Init();
   /* USER CODE BEGIN 2 */
 
-	 if(HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR1) != 0x32F2)
-	 {
+	 if(HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR1) != 0x32F2){
 	 set_time();
 	 }
 
@@ -641,6 +673,10 @@ int main(void)
 		day = gDate.Date;
 
 
+
+
+
+
 		if(recivedRangeFlag == 1){
 			//cutNumbersInRange(recivedRangeStart, recivedRangeEnd);
 			//for(int sayiciI = 0; sayiciI < (recivedRangeEnd - recivedRangeStart); sayiciI++){
@@ -649,10 +685,10 @@ int main(void)
 				TxData[5][1] = (uint8_t)(allAlarmsArr[recivedRangeStart] >> 8);
 				TxData[5][2] = (uint8_t)(recivedRangeStart); //bura yaz  nececi oldugun lower side
 				TxData[5][3] = (uint8_t)((recivedRangeStart) >> 8); //bura yaz  nececi oldugun higher side
-				TxData[5][4] = 0;
-				TxData[5][5] = 0;
-				TxData[5][6] = 0;
-				TxData[5][7] = 0;
+				TxData[5][4] = (allYear[recivedRangeStart]<<1) + (allMonth[recivedRangeStart]>>3);
+				TxData[5][5] = ((allMonth[recivedRangeStart])<<5) + allDay[recivedRangeStart];
+				TxData[5][6] = allHour[recivedRangeStart];
+				TxData[5][7] = allMinute[recivedRangeStart];
 
 				//for(int i=0; i<30; i++){
 					HAL_CAN_AddTxMessage(&hcan1, &TxHeader[5], TxData[5], &TxMailbox); //5 bosda idi isletdim
@@ -665,7 +701,7 @@ int main(void)
 		}
 
 		if(sentAlarmFlag == 1){
-			storeAlarm(sentAlarmId);
+			storeAlarm(sentAlarmId, year, month, day, hour, minute);
 			HAL_Delay(5);
 			sentAlarmFlag = 0;
 			printStoredNumbers();
@@ -844,7 +880,7 @@ int main(void)
 		digitalStates[20] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_3);//dig 3.5	//dig 85
 		digitalStates[21] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4);//dig 3.6	//dig 86
 		digitalStates[22] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);//dig 3.7	//dig 87
-		digitalStates[23] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6);//dig 3.8	//dig 88
+		//digitalStates[23] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6);//dig 3.8	//dig 88
 		digitalStates[24] = HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_9);//dig 3.9	//dig 89
 		digitalStates[25] = HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_10);//dig 3.10	//dig 90
 		digitalStates[26] = HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_11);//dig 3.11	//dig 91
@@ -1107,9 +1143,9 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE|RCC_OSCILLATORTYPE_LSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
+  RCC_OscInitStruct.LSEState = RCC_LSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 4;
@@ -1333,8 +1369,6 @@ static void MX_RTC_Init(void)
 
   /* USER CODE END RTC_Init 0 */
 
-
-
   /* USER CODE BEGIN RTC_Init 1 */
 
   /* USER CODE END RTC_Init 1 */
@@ -1356,7 +1390,8 @@ static void MX_RTC_Init(void)
 
   /* USER CODE END Check_RTC_BKUP */
 
-
+  /** Initialize RTC and set the Time and Date
+  */
   /* USER CODE BEGIN RTC_Init 2 */
 
   /* USER CODE END RTC_Init 2 */
@@ -1440,11 +1475,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : D2_6_Pin */
-  GPIO_InitStruct.Pin = D2_6_Pin;
+  /*Configure GPIO pin : PC13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(D2_6_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : D2_5_Pin PF6 */
   GPIO_InitStruct.Pin = D2_5_Pin|GPIO_PIN_6;
@@ -1487,9 +1522,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /*Configure GPIO pins : D1_15_Pin D3_1_Pin D3_2_Pin D3_3_Pin
-                           D3_4_Pin D2_13_Pin D2_14_Pin D2_15_Pin */
+                           PB6 D2_13_Pin D2_14_Pin D2_15_Pin */
   GPIO_InitStruct.Pin = D1_15_Pin|D3_1_Pin|D3_2_Pin|D3_3_Pin
-                          |D3_4_Pin|D2_13_Pin|D2_14_Pin|D2_15_Pin;
+                          |GPIO_PIN_6|D2_13_Pin|D2_14_Pin|D2_15_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
