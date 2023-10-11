@@ -128,6 +128,8 @@ float alarmLevel[25];
 int delayTime = 5;
 
 int sendCountCheck[13];
+int catacaqSay=30;
+
 
 int i2_t = 0;
 
@@ -296,31 +298,51 @@ uint16_t recivedRangeEnd = 0;
 uint8_t recivedRangeFlag = 0;
 
 const int MAX_NUMBERS = 100;  // Max numbers to store
-const int INDEX_ADDRESS = MAX_NUMBERS;  // Store the index at the 101st byte of EEPROM
-const int offset = 100;		//buna qeder doluluq var flash memoryde.
+const int INDEX_ADDRESS = 100;  // Store the index at the 101st byte of EEPROM
+const int offsett = 30;		//buna qeder doluluq var flash memoryde.
 uint16_t sentAlarmId, sentAlarmFlag=0;
-int surusdur=4;
+int surusdur=0;
 
 void storeAlarm(uint16_t idNumber, uint8_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute){
 
 	uint16_t currentIndex=0;
-	currentIndex = EEPROM_Read_NUM(INDEX_ADDRESS+offset, 0);	//indeksin deyerin oxu
-	EEPROM_Write_NUM(currentIndex+offset, 0 , idNumber);			//siradaki indekse idnomresin yaz
-	EEPROM_Write_NUM(currentIndex+offset, 16 , year);			//siradaki indekse year yaz
-	EEPROM_Write_NUM(currentIndex+offset, 24 , month);			//siradaki indekse month yaz
-	EEPROM_Write_NUM(currentIndex+offset, 32 , day);			//siradaki indekse day yaz
-	EEPROM_Write_NUM(currentIndex+offset, 40 , hour);			//siradaki indekse hour yaz
-	EEPROM_Write_NUM(currentIndex+offset, 48 , minute);			//siradaki indekse minute yaz
+	currentIndex = EEPROM_Read_NUM(INDEX_ADDRESS+offsett, 0 + surusdur);	//indeksin deyerin oxu
+	EEPROM_Write_NUM(currentIndex+offsett, 0 + surusdur, idNumber);			//siradaki indekse idnomresin yaz
+	HAL_Delay(5);
+	EEPROM_Write_NUM(currentIndex+offsett, 16 + surusdur, year);			//siradaki indekse year yaz
+	HAL_Delay(5);
+	EEPROM_Write_NUM(currentIndex+offsett, 24 + surusdur, month);			//siradaki indekse month yaz
+	HAL_Delay(5);
+	EEPROM_Write_NUM(currentIndex+offsett, 32 + surusdur, day);			//siradaki indekse day yaz
+	HAL_Delay(5);
+	EEPROM_Write_NUM(currentIndex+offsett, 40 + surusdur, hour);			//siradaki indekse hour yaz
+	HAL_Delay(5);
+	EEPROM_Write_NUM(currentIndex+offsett, 48 + surusdur, minute);			//siradaki indekse minute yaz
+	HAL_Delay(5);
 
-	//allAlarmsArr[0] = EEPROM_Read_NUM(currentIndex+offset, 0);
+	//EEPROM_Write_NUM(30, 0 + surusdur, 102);
+	//HAL_Delay(5);
+	//EEPROM_Write_NUM(94, 0 + surusdur, 165);
+	//wantedArr[0] = EEPROM_Read_NUM(30, 0 + surusdur);
+	//wantedArr[64] = EEPROM_Read_NUM(94, 0 + surusdur);
+
+	/////
+
+	for(int nedise = 0; nedise < 100; nedise++){
+		wantedArr[nedise] = EEPROM_Read_NUM(nedise+offsett, 0 + surusdur);
+	}
+
+	/////
+
+	//allAlarmsArr[0] = EEPROM_Read_NUM(currentIndex+offsett, 0);
 	currentIndex++;		//indeksi artirki diger adrese yazsin
 
 	if(currentIndex >= MAX_NUMBERS){		//eger kecirse limiti indeksi yeniden baslat
 		currentIndex = 0;
 	}
 
-	EEPROM_Write_NUM(INDEX_ADDRESS+offset, 0 , currentIndex);		//indeksi yaddasa ya
-
+	EEPROM_Write_NUM(INDEX_ADDRESS+offsett, 0 + surusdur, currentIndex);		//indeksi yaddasa ya
+	HAL_Delay(5);
 }
 
 
@@ -426,46 +448,45 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1) {
 }
 
 void printStoredNumbers() {
-	uint16_t currentIndex = EEPROM_Read_NUM(INDEX_ADDRESS+offset, 0 );
+	uint16_t currentIndex = EEPROM_Read_NUM(INDEX_ADDRESS+offsett, 0 + surusdur);
 	uint16_t sayiciS=0;
 
 	if(currentIndex == 0){
-		allAlarmsArr[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offset-1, 0 );
-		allYear[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offset-1, 16 );
-		allMonth[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offset-1, 24 );
-		allDay[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offset-1, 32 );
-		allHour[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offset-1, 40 );
-		allMinute[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offset-1, 48 );
+		allAlarmsArr[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offsett-1, 0 + surusdur);
+		allYear[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offsett-1, 16 + surusdur);
+		allMonth[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offsett-1, 24 + surusdur);
+		allDay[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offsett-1, 32 + surusdur);
+		allHour[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offsett-1, 40 + surusdur);
+		allMinute[sayiciS] = EEPROM_Read_NUM(MAX_NUMBERS+offsett-1, 48 + surusdur);
 		sayiciS++;
 	}
 	else{
-		allAlarmsArr[sayiciS] = EEPROM_Read_NUM(currentIndex+offset-1, 0 );
-		allAlarmsArr[sayiciS] = EEPROM_Read_NUM(currentIndex+offset-1, 0 );
-		allYear[sayiciS] = EEPROM_Read_NUM(currentIndex+offset-1, 16 );
-		allMonth[sayiciS] = EEPROM_Read_NUM(currentIndex+offset-1, 24 );
-		allDay[sayiciS] = EEPROM_Read_NUM(currentIndex+offset-1, 32 );
-		allHour[sayiciS] = EEPROM_Read_NUM(currentIndex+offset-1, 40 );
-		allMinute[sayiciS] = EEPROM_Read_NUM(currentIndex+offset-1, 48 );
+		allAlarmsArr[sayiciS] = EEPROM_Read_NUM(currentIndex+offsett-1, 0 + surusdur);
+		allYear[sayiciS] = EEPROM_Read_NUM(currentIndex+offsett-1, 16 + surusdur);
+		allMonth[sayiciS] = EEPROM_Read_NUM(currentIndex+offsett-1, 24 + surusdur);
+		allDay[sayiciS] = EEPROM_Read_NUM(currentIndex+offsett-1, 32 + surusdur);
+		allHour[sayiciS] = EEPROM_Read_NUM(currentIndex+offsett-1, 40 + surusdur);
+		allMinute[sayiciS] = EEPROM_Read_NUM(currentIndex+offsett-1, 48 + surusdur);
 		sayiciS++;
 	}
   for (int i = currentIndex - 2; i >= 0; i--) {
-	  allAlarmsArr[sayiciS] = EEPROM_Read_NUM(i+offset, 0 );
-		allYear[sayiciS] = EEPROM_Read_NUM(i+offset, 16 );
-		allMonth[sayiciS] = EEPROM_Read_NUM(i+offset, 24 );
-		allDay[sayiciS] = EEPROM_Read_NUM(i+offset, 32 );
-		allHour[sayiciS] = EEPROM_Read_NUM(i+offset, 40 );
-		allMinute[sayiciS] = EEPROM_Read_NUM(i+offset, 48 );
+	  allAlarmsArr[sayiciS] = EEPROM_Read_NUM(i+offsett, 0 + surusdur);
+		allYear[sayiciS] = EEPROM_Read_NUM(i+offsett, 16 + surusdur);
+		allMonth[sayiciS] = EEPROM_Read_NUM(i+offsett, 24 + surusdur);
+		allDay[sayiciS] = EEPROM_Read_NUM(i+offsett, 32 + surusdur);
+		allHour[sayiciS] = EEPROM_Read_NUM(i+offsett, 40 + surusdur);
+		allMinute[sayiciS] = EEPROM_Read_NUM(i+offsett, 48 + surusdur);
 	  sayiciS++;
   }
 
   // Print numbers from start to currentIndex
   for (int i = MAX_NUMBERS - 1; i > currentIndex - 1; i--) {
-	  allAlarmsArr[sayiciS] = EEPROM_Read_NUM(i+offset, 0 );
-		allYear[sayiciS] = EEPROM_Read_NUM(i+offset, 16 );
-		allMonth[sayiciS] = EEPROM_Read_NUM(i+offset, 24 );
-		allDay[sayiciS] = EEPROM_Read_NUM(i+offset, 32 );
-		allHour[sayiciS] = EEPROM_Read_NUM(i+offset, 40 );
-		allMinute[sayiciS] = EEPROM_Read_NUM(i+offset, 48 );
+	  allAlarmsArr[sayiciS] = EEPROM_Read_NUM(i+offsett, 0 + surusdur);
+		allYear[sayiciS] = EEPROM_Read_NUM(i+offsett, 16 + surusdur);
+		allMonth[sayiciS] = EEPROM_Read_NUM(i+offsett, 24 + surusdur);
+		allDay[sayiciS] = EEPROM_Read_NUM(i+offsett, 32 + surusdur);
+		allHour[sayiciS] = EEPROM_Read_NUM(i+offsett, 40 + surusdur);
+		allMinute[sayiciS] = EEPROM_Read_NUM(i+offsett, 48 + surusdur);
 	  sayiciS++;
   }
 }
@@ -580,11 +601,16 @@ int main(void)
 
 	HAL_TIM_Base_Start_IT(&htim6);
 	//eeprom un 100 cu page e qeder temizlemek
+
 	/*
-	 for(int t=0;t > 100 ; t++){
+	 for(int t=100;t < 301 ; t++){
 	 EEPROM_PageErase(t);
 	 }
 	 */
+
+	for(int nedise = 0; nedise < 100; nedise++){
+		wantedArr[nedise] = EEPROM_Read_NUM(nedise+offsett, 0 + surusdur);
+	}
 
 	void sendData(int inputId)						//
 	{
@@ -647,6 +673,7 @@ int main(void)
 
 	//bu testi wile icine qoyma cunki eeprom un yazma omru var bu omur 1milyon defedi. bir cel olse butun eprom xarab olacaq.
 	EEPROM_Write_NUM(0, 0, dataw3);
+	HAL_Delay(5);
 	datar3 = EEPROM_Read_NUM(0, 0);
 
 
@@ -705,6 +732,9 @@ int main(void)
 			HAL_Delay(5);
 			sentAlarmFlag = 0;
 			printStoredNumbers();
+			for(int nedise = 0; nedise < 100; nedise++){
+				wantedArr[nedise] = EEPROM_Read_NUM(nedise+offsett, 0 + surusdur);
+			}
 			//cutNumbersInRange(20,30);
 
 			HAL_CAN_AddTxMessage(&hcan1, &TxHeader[6], TxData[6], &TxMailbox); //5 bosda idi isletdim
@@ -723,6 +753,7 @@ int main(void)
 		if (alarmLevelRecivedFlag == 1) {
 			for (int k = 0; k < 10; k++) {
 				EEPROM_Write_NUM(8+k, k, alarmLevel[k]);
+				HAL_Delay(5);
 				alarmLevelRead[k] = EEPROM_Read_NUM(8+k, k);
 			}
 			HAL_CAN_AddTxMessage(&hcan1, &TxHeader[28], TxData[28], &TxMailbox);
@@ -747,9 +778,12 @@ int main(void)
 			}
 
 			EEPROM_Write_NUM(1, 0, fadeOutTot[0]);
+			HAL_Delay(5);
 			EEPROM_Write_NUM(2, 0, fadeOutTot[1]);
+			HAL_Delay(5);
 
 			EEPROM_Write_NUM(3, 0, analogFadeOutTot[0]);
+			HAL_Delay(5);
 
 			contactStateTot[0] = 0;
 			contactStateTot[1] = 0;
@@ -769,10 +803,15 @@ int main(void)
 			}
 
 			EEPROM_Write_NUM(10, 0, contactStateTot[0]);
+			HAL_Delay(5);
 			EEPROM_Write_NUM(11, 0, contactStateTot[1]);
+			HAL_Delay(5);
 			EEPROM_Write_NUM(12, 0, contactStateTot[2]);
+			HAL_Delay(5);
 			EEPROM_Write_NUM(13, 0, contactStateTot[3]);
+			HAL_Delay(5);
 			EEPROM_Write_NUM(14, 0, contactStateTot[4]);
+			HAL_Delay(5);
 
 			contactStateTest[0] = EEPROM_Read_NUM(10, 0);
 			contactStateTest[1] = EEPROM_Read_NUM(11, 0);
@@ -791,6 +830,7 @@ int main(void)
 
 					EEPROM_Write_NUM(20 + t, 16 * k,
 							delaySecondsTot[t * 4 + k]);
+					HAL_Delay(5);
 					delaySecondsTot[t * 4 + k] = 0;
 				}
 			}
@@ -880,7 +920,7 @@ int main(void)
 		digitalStates[20] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_3);//dig 3.5	//dig 85
 		digitalStates[21] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4);//dig 3.6	//dig 86
 		digitalStates[22] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);//dig 3.7	//dig 87
-		//digitalStates[23] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6);//dig 3.8	//dig 88
+		digitalStates[23] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6);//dig 3.8	//dig 88
 		digitalStates[24] = HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_9);//dig 3.9	//dig 89
 		digitalStates[25] = HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_10);//dig 3.10	//dig 90
 		digitalStates[26] = HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_11);//dig 3.11	//dig 91
@@ -975,7 +1015,7 @@ int main(void)
 		TxData[21][2] = stationAlarm;
 		TxData[21][3] = stationAlarm;
 
-		if(sendCountCheck[10] >= 10){
+		if(sendCountCheck[10] >= catacaqSay){
 			HAL_CAN_AddTxMessage(&hcan1, &TxHeader[21], TxData[21], &TxMailbox);
 			HAL_Delay(delayTime);
 			sendCountCheck[10] = 0;
@@ -994,7 +1034,7 @@ int main(void)
 		TxData[8][6] = digitalSum[3];
 		TxData[8][7] = digitalSum[3] >> 8;
 
-		if(sendCountCheck[11] >= 10){
+		if(sendCountCheck[11] >= catacaqSay){
 			HAL_CAN_AddTxMessage(&hcan1, &TxHeader[8], TxData[8], &TxMailbox);
 			HAL_Delay(delayTime);
 			sendCountCheck[11] = 0;
@@ -1098,7 +1138,7 @@ int main(void)
 
 			}
 
-			if(sendCountCheck[i] >= 10){
+			if(sendCountCheck[i] >= catacaqSay){
 				HAL_CAN_AddTxMessage(&hcan1, &TxHeader[i], TxData[i], &TxMailbox);
 				HAL_Delay(delayTime);
 				sendCountCheck[i] = 0;
