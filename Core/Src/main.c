@@ -82,8 +82,8 @@ void set_time(void)
 	  RTC_DateTypeDef sDate = {0};
 	  /** Initialize RTC and set the Time and Date
 	  */
-	  sTime.Hours = 13;
-	  sTime.Minutes = 30;
+	  sTime.Hours = 12;
+	  sTime.Minutes = 12;
 	  sTime.Seconds = 0;
 	  sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
 	  sTime.StoreOperation = RTC_STOREOPERATION_RESET;
@@ -91,9 +91,9 @@ void set_time(void)
 	  {
 	    Error_Handler();
 	  }
-	  sDate.WeekDay = RTC_WEEKDAY_THURSDAY;
-	  sDate.Month = RTC_MONTH_SEPTEMBER;
-	  sDate.Date = 14;
+	  sDate.WeekDay = RTC_WEEKDAY_MONDAY;
+	  sDate.Month = RTC_MONTH_NOVEMBER;
+	  sDate.Date = 13;
 	  sDate.Year = 23;
 
 	  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK)
@@ -132,6 +132,8 @@ int catacaqSay=30;
 
 
 int i2_t = 0;
+
+int otherSignals[2] = {0, 0};
 
 uint16_t message[62];
 uint16_t analog[62];
@@ -219,12 +221,12 @@ uint16_t contactStateTest[28];
 uint16_t delaySeconds[80]; //signal cixdiqdan sonra neqeder gozleyecek
 uint16_t delaySecondsTot[40];
 uint16_t delaySecondsTotRead[40];
-uint16_t digitalInputId[28] = { 4065, 4066, 4067, 4068, 4069, 4070, 4071, 4072,
+uint16_t digitalInputId[30] = { 4065, 4066, 4067, 4068, 4069, 4070, 4071, 4072,
 		4073, 4074, 4075, 4076, 4077, 4078, 4079, 4080, 4081, 4082, 4083, 4084,
-		4085, 4086, 4087, 4088, 4089, 4090, 4091, 4092 };		//signal id leri
-uint8_t fadeOut[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		4085, 4086, 4087, 4088, 4089, 4090, 4091, 4092, 4113, 4114 };		//signal id leri
+uint8_t fadeOut[30] = { 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0 };
-uint8_t fadeOutBaxmaq[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+uint8_t fadeOutBaxmaq[30] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 uint16_t fadeOutTot[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -232,7 +234,7 @@ uint16_t fadeOutTotRead[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 uint16_t fadeOutTotReadTest[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; //
 int fadeOutReg = 0;
 
-uint16_t delaySecondsCount[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+uint16_t delaySecondsCount[30] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };		//delay saniye sayici
 
 uint16_t delaySecondsCountForOff[71] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -240,15 +242,15 @@ uint16_t delaySecondsCountForOff[71] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };	//alarmi sondurmek icin delay saniye sayici
 
-uint16_t alarmOn[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+uint16_t alarmOn[30] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 uint16_t alarmOnAnalog[30] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-uint16_t alarmCount[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+uint16_t alarmCount[30] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; 			// digital alarm sayicisi
-uint16_t waitingForDelay[28] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+uint16_t waitingForDelay[30] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };	// delay ucun gozleme registeri
 
 uint16_t analogInputID[10] = { 4006, 4008, 4010, 4012, 4014, 4016, 4018, 4020,
@@ -362,6 +364,11 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1) {
 
 	if (RxHeader.StdId == 0x501) {
 		pk1 = RxData[0];
+	}
+
+	if (RxHeader.StdId == 0x510) {
+		stationAlarm = notResetAlarm;
+		HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_SET);	//alarim isigin yandir
 	}
 
 	if (RxHeader.StdId == 0x600) {
@@ -1034,8 +1041,13 @@ int main(void)
 		TxData[8][6] = digitalSum[3];
 		TxData[8][7] = digitalSum[3] >> 8;
 
+		TxData[7][0] = otherSignals[0] ;
+		TxData[7][1] = otherSignals[1] ;
+
 		if(sendCountCheck[11] >= catacaqSay){
 			HAL_CAN_AddTxMessage(&hcan1, &TxHeader[8], TxData[8], &TxMailbox);
+			HAL_Delay(delayTime);
+			HAL_CAN_AddTxMessage(&hcan1, &TxHeader[7], TxData[7], &TxMailbox);
 			HAL_Delay(delayTime);
 			sendCountCheck[11] = 0;
 		}
@@ -1149,6 +1161,25 @@ int main(void)
 
 
 		}
+
+
+		//////burda grup alarmlar ve inhibit ucun olan signallari ayarla//////
+		///////4113(Sh.Gen PS)//////
+		if((alarmOnAnalog[0] == 1) || (alarmOnAnalog[1] == 1) || (alarmOnAnalog[2] == 1) || (alarmOnAnalog[3] == 1) || (alarmOnAnalog[4] == 1)) {
+			otherSignals[0] = 1;
+		}
+		else{
+			otherSignals[0] = 0;
+		}
+		//////////////////////////////////////////////////////////////////////
+		///////4114(Sh.Gen SB)//////
+		if((alarmOnAnalog[5] == 1) || (alarmOnAnalog[6] == 1) || (alarmOnAnalog[7] == 1) || (alarmOnAnalog[8] == 1) || (alarmOnAnalog[9] == 1)) {
+			otherSignals[1] = 1;
+		}
+		else{
+			otherSignals[1] = 0;
+		}
+		//////////////////////////////////////////////////////////////////////
 
 		/*
 		 TxData[16][0] = digitalSum;
